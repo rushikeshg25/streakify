@@ -4,6 +4,7 @@ import { resolve } from 'node:path';
 import { ZodError } from 'zod';
 import type { Command, State } from '../shared/model';
 import { createSession, sameSecret, validSession } from './auth';
+import { configurationError } from './config';
 
 export type Store = {
   read(): State | Promise<State>;
@@ -18,6 +19,7 @@ export function createApi(options: { store?: Store; hosted?: boolean; password?:
   const password = options.password ?? process.env.APP_PASSWORD;
   const secret = options.secret ?? process.env.SESSION_SECRET;
   const secured = !!password;
+  const setupError = configurationError({ hosted, password, secret, databaseUrl: process.env.DATABASE_URL, hasStore: !!options.store });
   let storePromise: Promise<Store> | undefined;
   const attempts = new Map<string, { count: number; until: number }>();
   async function store(): Promise<Store> {
@@ -35,11 +37,9 @@ export function createApi(options: { store?: Store; hosted?: boolean; password?:
   app.use('/api', (req, res, next) => {
     res.setHeader('Cache-Control', 'no-store');
     res.setHeader('X-Content-Type-Options', 'nosniff');
-    if ((hosted || secured) && (!password || password.length < 12 || !secret || secret.length < 32)) {
-      res.status(503).json({ error: 'Private workspace setup is incomplete. Set APP_PASSWORD (at least 12 characters) and SESSION_SECRET (at least 32 characters) in your server environment.' }); return;
-    }
+    if (setupError) { res.status(503).json({ error: setupError }); return; }
     if (!hosted && !['127.0.0.1', 'localhost', '[::1]'].includes(req.hostname)) { res.status(403).json({ error: 'Use localhost to access the development server.' }); return; }
-    if (req.method !== 'GET') {
+    if (!['GET', 'HEAD'].includes(req.method)) {
       const origin = req.get('origin');
       const expected = `${hosted ? 'https' : 'http'}://${req.get('host')}`;
       if (origin && origin !== expected) { res.status(403).json({ error: 'This request must come from Streakify.' }); return; }

@@ -1,12 +1,15 @@
-import { test, expect } from '@playwright/test';
-import { newState } from '../../shared/model';
+import { test as base, expect } from '@playwright/test';
+import { newState, defaultRule } from '../../shared/model';
+import { createSession } from '../../server/auth';
+
+const test = base.extend({ request: async ({ context }, use) => { await use(context.request); } });
 
 test.beforeEach(async ({ request, context }) => {
-  const login = await request.post('/api/auth', { data: { password: 'e2e-workspace-password' } });
-  expect(login.ok()).toBeTruthy();
-  const storage = await request.storageState();
-  await context.addCookies(storage.cookies);
-  const response = await request.post('/api/import', { data: newState('UTC') });
+  const token = createSession('e2e-only-session-secret-not-for-deployment', 'e2e-workspace-password');
+  const cookies = [{ name: 'streakify_session', value: token, domain: '127.0.0.1', path: '/' }];
+  await context.addCookies(cookies);
+  // Seed through the authenticated API without spending the login limiter's attempts.
+  const response = await request.post('/api/import', { data: newState('UTC'), headers: { Cookie: `streakify_session=${token}` } });
   expect(response.ok()).toBeTruthy();
 });
 
@@ -44,6 +47,7 @@ test('create a timed habit, log partial and full progress, persist, redeem and u
   await page.reload();
   await expect(page.getByText('20 / 20 minutes', { exact: true })).toBeVisible();
   state = await (await request.get('/api/state')).json(); expect(state.entries[0].xp).toBe(20); expect(state.entries[0].coins).toBe(5);
+  await page.evaluate(() => window.scrollTo(0, 0));
   await page.screenshot({ path: `test-results/${testInfo.project.name}-today.png`, fullPage: true });
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBeTruthy();
   await page.getByRole('button', { name: 'Rewards', exact: true }).click();
@@ -91,7 +95,8 @@ test('customize, pause, archive, restore and validate backup import on narrow sc
   await page.getByRole('button', { name: 'Save settings', exact: true }).click();
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
   const colors = await page.locator('html').evaluate(element => ({ color: getComputedStyle(element).color, background: getComputedStyle(element).backgroundColor }));
-  expect(colors).toEqual({ color: 'rgb(232, 233, 243)', background: 'rgb(30, 32, 48)' });
+  expect(colors).toEqual({ color: 'rgb(232, 239, 233)', background: 'rgb(24, 35, 30)' });
+  await page.evaluate(() => window.scrollTo(0, 0));
   await page.screenshot({ path: `test-results/${testInfo.project.name}-settings.png`, fullPage: true });
   if (testInfo.project.name === 'mobile') await page.setViewportSize({ width: 320, height: 720 });
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBeTruthy();
@@ -105,4 +110,39 @@ test('customize, pause, archive, restore and validate backup import on narrow sc
   await page.getByRole('button', { name: 'Replace and restore', exact: true }).click();
   await expect(page.getByRole('dialog')).toHaveCount(0);
   await expect(page.getByLabel('Your name', { exact: true })).toHaveValue('Rushi');
+});
+
+test('daily filters, search, keyboard dialogs and narrow layouts remain usable', async ({ page, request }, testInfo) => {
+  for (const [name, category, icon] of [['Read a little', 'Learning', 'book'], ['Morning stretch', 'Health', 'move']]) {
+    const response = await request.post('/api/command', { data: { requestId: crypto.randomUUID(), command: { type: 'habit.save', input: { name, category, icon, color: 'green', rule: defaultRule } } } });
+    expect(response.ok()).toBeTruthy();
+  }
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Log Read a little', exact: true }).click();
+  await page.getByRole('button', { name: 'Done', exact: true }).click();
+  await expect(page.locator('.habit-list .habit-row')).toHaveCount(1);
+  await expect(page.getByRole('button', { name: 'Undo Read a little', exact: true })).toBeVisible();
+  await page.getByRole('button', { name: 'To do', exact: true }).click();
+  await expect(page.getByRole('button', { name: 'Log Morning stretch', exact: true })).toBeVisible();
+  await page.getByRole('button', { name: 'All', exact: true }).click();
+  await page.getByRole('textbox', { name: 'Search habits' }).fill('not a habit');
+  await expect(page.getByRole('heading', { name: 'No matching habits' })).toBeVisible();
+  await page.getByRole('button', { name: 'Show all habits', exact: true }).click();
+  await expect(page.locator('.habit-list .habit-row')).toHaveCount(2);
+  await page.getByRole('button', { name: 'New habit', exact: true }).click();
+  await expect(page.getByRole('dialog')).toBeVisible();
+  await page.keyboard.press('Escape');
+  await expect(page.getByRole('dialog')).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'New habit', exact: true })).toBeFocused();
+  if (testInfo.project.name === 'mobile') await page.setViewportSize({ width: 320, height: 720 });
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBeTruthy();
+  await page.evaluate(() => window.scrollTo(0, 0));
+  await page.screenshot({ path: `test-results/${testInfo.project.name}-dashboard.png`, fullPage: true });
+});
+
+test('database errors remain actionable when the workspace cannot load', async ({ page }) => {
+  await page.route('**/api/state', route => route.fulfill({ status: 503, contentType: 'application/json', body: JSON.stringify({ error: 'The database could not be reached. Check the server connection and try again.' }) }));
+  await page.goto('/');
+  await expect(page.getByText('The database could not be reached. Check the server connection and try again.', { exact: true })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Try again' })).toBeVisible();
 });

@@ -89,14 +89,14 @@ export function isScheduled(habit: Habit, date: string): boolean {
   return date >= habit.created && !isPaused(habit, date) && (rule.schedule !== 'weekdays' || rule.days.includes(weekday(date)));
 }
 export function entryFor(state: State, habitId: string, date: string): Entry | undefined { return state.entries.find(e => e.habitId === habitId && e.date === date); }
-export function weeklyCompletions(state: State, habitId: string, date: string): number {
+export function weeklyCompletions(state: State, habitId: string, date: string, through?: string): number {
   const start = weekOf(date, state.settings.weekStart);
-  return state.entries.filter(e => e.habitId === habitId && e.complete && e.date >= start && e.date < addDays(start, 7)).length;
+  return state.entries.filter(e => e.habitId === habitId && e.complete && e.date >= start && e.date < addDays(start, 7) && (!through || e.date <= through)).length;
 }
 export function isDue(state: State, habit: Habit, date: string): boolean {
   if (habit.archived || !isScheduled(habit, date)) return false;
   const rule = ruleAt(habit, date);
-  return rule.schedule !== 'weekly' || weeklyCompletions(state, habit.id, date) < rule.weeklyTarget || !!entryFor(state, habit.id, date)?.value;
+  return rule.schedule !== 'weekly' || weeklyCompletions(state, habit.id, date) < rule.weeklyTarget || !!entryFor(state, habit.id, date);
 }
 export function streak(state: State, habit: Habit, date: string): number {
   let count = 0;
@@ -107,7 +107,7 @@ export function streak(state: State, habit: Habit, date: string): number {
       const reference = cursor < habit.created ? habit.created : cursor;
       const rule = ruleAt(habit, reference);
       if (rule.schedule !== 'weekly') break;
-      const met = weeklyCompletions(state, habit.id, cursor) >= rule.weeklyTarget;
+      const met = weeklyCompletions(state, habit.id, cursor, date) >= rule.weeklyTarget;
       const allPaused = Array.from({ length: 7 }, (_, i) => addDays(cursor, i)).every(d => d < habit.created || isPaused(habit, d) || entryFor(state, habit.id, d)?.rested);
       if (met) count++; else if (!allPaused && cursor !== weekOf(date, state.settings.weekStart)) break;
       cursor = addDays(cursor, -7);

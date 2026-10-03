@@ -143,3 +143,19 @@ test('private sessions reject tampering, expiration, and password changes', () =
   assert.equal(validSession(`streakify_session=${token}`, secret, 'changed-password', 2000), false);
   assert.equal(validSession(`streakify_session=${token}`, secret, password, 8 * 86400000), false);
 });
+
+test('weekly rest days remain visible after the weekly target is reached', () => {
+  let state = habit({ schedule: 'weekly', weeklyTarget: 1 });
+  state = log(state, '2026-09-28', 0, true);
+  state = log(state, '2026-09-29');
+  assert.equal(isDue(state, state.habits[0], '2026-09-28'), true);
+});
+
+test('backdated weekly streaks do not count completions later than the selected day', () => {
+  let state = habit({ schedule: 'weekly', weeklyTarget: 2 });
+  state = log(state, '2026-09-29');
+  state = log(state, '2026-09-30');
+  assert.equal(streak(state, state.habits[0], '2026-09-28'), 0);
+  assert.equal(streak(state, state.habits[0], '2026-09-29'), 0);
+  assert.equal(streak(state, state.habits[0], '2026-09-30'), 1);
+});

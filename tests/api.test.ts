@@ -45,3 +45,14 @@ test('hosted configuration fails closed without a password and secret', async ()
     assert.equal(response.status, 503);
   } finally { await new Promise<void>(resolve => server.close(() => resolve())); }
 });
+
+test('HEAD requests support uptime checks without requiring a JSON body', async () => {
+  const store = createStore(':memory:');
+  const server = createApi({ store, password: '', secret: '' }).listen(0, '127.0.0.1');
+  await new Promise<void>(resolve => server.once('listening', resolve));
+  try {
+    const response = await fetch(`http://127.0.0.1:${(server.address() as AddressInfo).port}/api/auth`, { method: 'HEAD' });
+    assert.equal(response.status, 200);
+    assert.equal(await response.text(), '');
+  } finally { await new Promise<void>(resolve => server.close(() => resolve())); store.close(); }
+});

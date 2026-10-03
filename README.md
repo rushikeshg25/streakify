@@ -2,12 +2,23 @@
 
 A responsive, configurable habit tracker with XP, levels, coins, and personal rewards. Built for a private, single-user workspace on **Vercel Hobby**, using **your PostgreSQL connection URI** for durable storage.
 
+## One-click deploy
+
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Frushikeshg25%2Fstreakify&project-name=streakify&repository-name=streakify&env=DATABASE_URL%2CAPP_PASSWORD%2CSESSION_SECRET&envDescription=PostgreSQL+URI%2C+a+workspace+password+%2812%2B+characters%29%2C+and+a+random+session+secret+%2832%2B+characters%29.+See+the+setup+guide+for+details.&envLink=https%3A%2F%2Fgithub.com%2Frushikeshg25%2Fstreakify%23one-click-deploy)
+
+Click **Deploy with Vercel** to create your own repository and project. Vercel asks for three private values before building: your PostgreSQL connection URI, a workspace password of at least 12 characters, and a random session secret of at least 32 characters. Generate the secret with `openssl rand -hex 32`. The build settings and API function are already configured. No CLI or code changes are required.
+
+Bring a PostgreSQL database (for example, Neon or Supabase), preferably its pooled connection URI. The button does not provision a database or select a paid plan. Tables are created automatically when you sign in. Missing or malformed configuration stops the deployment with a clear error; a valid URI still needs a reachable database.
+
+If you already own this repository, [import the existing repository](https://vercel.com/new/import?s=https%3A%2F%2Fgithub.com%2Frushikeshg25%2Fstreakify) to connect it directly instead of cloning a second copy.
+
 ## Run locally
 
 Requires Node.js 22.13 or newer in the Node 22 release line.
 
 ```sh
-npm install
+nvm use
+npm ci
 npm run dev
 ```
 
@@ -22,10 +33,10 @@ npm start
 
 The production build serves the same UI and API locally. Vercel uses the static build and API function directly; it does not run `npm start`.
 
-## Deploy to Vercel
+## Manual deployment / existing repository
 
 1. Push this project to your Git provider and import it into Vercel.
-2. Select the **Vite** framework preset, build command **`npm run build`**, output directory **`dist`**, and Node.js **22.x**. These build defaults are also in `vercel.json`.
+2. Select the **Vite** framework preset, build command **`npm run build:vercel`**, output directory **`dist`**, and Node.js **22.x**. These build defaults are also in `vercel.json`.
 3. Add these **server-side** environment variables to the deployment:
 
    | Variable | Value |
@@ -43,11 +54,11 @@ Do not prefix these variables with `VITE_`; that would expose them to the browse
 
 The application uses static assets and **one Node API function**, with no cron jobs, persistent server, paid Vercel add-ons, or filesystem writes in deployed mode. Your database is supplied separately. Vercel Hobby is intended for personal, non-commercial use, and provider usage limits still apply. See [Vercel Hobby](https://vercel.com/docs/plans/hobby) and [Vercel Node functions](https://vercel.com/docs/functions/runtimes/node-js).
 
-No deployment or live database is created by this repository. Add your URI and environment variables in Vercel; a remote database connection cannot be verified until those are configured.
+The Deploy button starts Vercel’s guided project creation. You approve the deployment in Vercel after entering your configuration. This repository does not contain credentials or create a live database on its own.
 
 ## What is included
 
-- **Today:** Daily agenda, week navigation, backdated check-ins, partial counts/minutes, one-tap checkmarks, rest days, and undo.
+- **Today:** Daily completion ring, weekly check-in summary, habit search, completion/category filters, week navigation, backdated check-ins, partial counts/minutes, one-tap checkmarks, rest days, and undo.
 - **My habits:** Templates, custom names/categories/icons/colors, daily/weekday/weekly schedules, ordering, pause/resume, archive/restore, and custom earnings.
 - **Progress:** Calendar, eight-week completion chart, check-in history, current streaks, and historical undo.
 - **Rewards:** Custom coin costs and descriptions, daily/weekly redemption limits, redemption history, and refunds.
@@ -94,7 +105,7 @@ To use an existing Chrome executable:
 CHROME_PATH=/path/to/chrome npm run test:e2e
 ```
 
-Domain/API tests cover scheduling, timezone boundaries, reward accounting, duplicate commands, durable local storage, restore validation, and private access. Browser tests exercise full workflows at desktop and phone sizes, including a 320px layout check. They use a separate temporary SQLite database at `/tmp/streakify-e2e.sqlite`, never the application database.
+Domain/API tests cover scheduling, timezone boundaries, reward accounting, duplicate commands, durable local storage, restore validation, deployment configuration, and private access. To also test real PostgreSQL locking, concurrent writes, and login limits, set `TEST_DATABASE_URL` to a dedicated test database when running `npm test`. This test creates and drops its own uniquely named schema; it never uses `DATABASE_URL`. Browser tests exercise full workflows at desktop and phone sizes, including a 320px layout check. They use a separate temporary SQLite database at `/tmp/streakify-e2e.sqlite`, never the application database.
 
 ## Code map
 

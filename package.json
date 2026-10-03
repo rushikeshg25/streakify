@@ -9,6 +9,7 @@
   "scripts": {
     "dev": "tsx watch server/index.ts",
     "build": "tsc --noEmit && vite build",
+    "build:vercel": "tsx scripts/check-deployment.ts && npm run build",
     "start": "NODE_ENV=production tsx server/index.ts",
     "test": "node --import tsx --test tests/*.test.ts",
     "test:e2e": "playwright test",

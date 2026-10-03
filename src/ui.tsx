@@ -9,10 +9,17 @@ export function Symbol({ name, size = 20, className = '' }: { name: string; size
 export function Coin({ size = 16 }: { size?: number }) { return <span className="coin" style={{ width: size, height: size, fontSize: size * .65 }} aria-hidden="true">✦</span>; }
 export function Modal({ title, children, onClose, wide = false }: { title: string; children: ReactNode; onClose: () => void; wide?: boolean }) {
   const ref = useRef<HTMLDialogElement>(null);
+  const [returnFocus] = useState(() => document.activeElement instanceof HTMLElement ? document.activeElement : null);
   const [error, setError] = useState('');
-  useEffect(() => { const dialog = ref.current!; dialog.showModal(); return () => dialog.close(); }, []);
+  useEffect(() => {
+    const dialog = ref.current!;
+    dialog.showModal();
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => { dialog.close(); document.body.style.overflow = previousOverflow; returnFocus?.focus({ preventScroll: true }); };
+  }, [returnFocus]);
   useEffect(() => { const report = (event: Event) => setError((event as CustomEvent<string>).detail); window.addEventListener('streakify:error', report); return () => window.removeEventListener('streakify:error', report); }, []);
-  return <dialog ref={ref} className={`modal ${wide ? 'wide' : ''}`} aria-labelledby="dialog-title" onCancel={onClose} onClick={e => { if (e.target === ref.current) { const rect = ref.current.getBoundingClientRect(); if (e.clientX < rect.left || e.clientX > rect.right || e.clientY < rect.top || e.clientY > rect.bottom) onClose(); } }}>
+  return <dialog ref={ref} className={`modal ${wide ? 'wide' : ''}`} aria-labelledby="dialog-title" onCancel={e => { e.preventDefault(); onClose(); }} onClick={e => { if (e.target === ref.current) { const rect = ref.current.getBoundingClientRect(); if (e.clientX < rect.left || e.clientX > rect.right || e.clientY < rect.top || e.clientY > rect.bottom) onClose(); } }}>
     <div className="modal-header"><h2 id="dialog-title">{title}</h2><button className="icon-button" aria-label="Close dialog" onClick={onClose}><X size={20} /></button></div>{error && <p className="error-banner" role="alert">{error}</p>}{children}
   </dialog>;
 }
