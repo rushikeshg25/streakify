@@ -79,7 +79,7 @@ export function createApi(options: { store?: Store; hosted?: boolean; password?:
   app.get('/api/export', async (_req, res) => {
     res.setHeader('Content-Disposition', 'attachment; filename="streakify-backup.json"'); res.json(await (await store()).read());
   });
-  app.get('/api/export/csv', async (_req, res) => {
+  app.get(['/api/export-csv', '/api/export/csv'], async (_req, res) => {
     res.setHeader('Content-Disposition', 'attachment; filename="streakify-check-ins.csv"');
     res.type('text/csv').send(checkInsCsv(await (await store()).read()));
   });
