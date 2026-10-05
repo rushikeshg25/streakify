@@ -1,5 +1,5 @@
 import { execFileSync } from 'node:child_process';
-import { mkdtempSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
+import { cpSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
@@ -8,12 +8,17 @@ import { pathToFileURL } from 'node:url';
 const output = mkdtempSync(join(tmpdir(), 'streakify-server-check-'));
 try {
   execFileSync(process.execPath, [resolve('node_modules/typescript/bin/tsc'), '--project', 'tsconfig.server.json', '--noEmit', 'false', '--rootDir', '.', '--outDir', output], { stdio: 'inherit' });
+  cpSync(resolve('server/certs'), join(output, 'server/certs'), { recursive: true });
   writeFileSync(join(output, 'package.json'), '{"type":"module"}');
   symlinkSync(resolve('node_modules'), join(output, 'node_modules'), 'dir');
   const moduleUrl = relative => JSON.stringify(pathToFileURL(join(output, relative)).href);
   execFileSync(process.execPath, ['--input-type=module', '-e', `
     import assert from 'node:assert/strict';
     import { once } from 'node:events';
+    const { postgresConnectionString } = await import(${moduleUrl('server/postgres-config.js')});
+    const { readFileSync } = await import('node:fs');
+    const connection = new URL(postgresConnectionString('postgresql://test@db.test.supabase.co/postgres?sslmode=require'));
+    assert.match(readFileSync(connection.searchParams.get('sslrootcert'), 'utf8'), /BEGIN CERTIFICATE/);
     await import(${moduleUrl('server/postgres.js')});
     await import(${moduleUrl('server/store.js')});
     const { default: app } = await import(${moduleUrl('api/[...path].js')});
