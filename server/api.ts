@@ -5,6 +5,7 @@ import { ZodError } from 'zod';
 import type { Command, State } from '../shared/model';
 import { createSession, sameSecret, validSession } from './auth';
 import { configurationError } from './config';
+import { checkInsCsv } from '../shared/export';
 
 export type Store = {
   read(): State | Promise<State>;
@@ -76,6 +77,10 @@ export function createApi(options: { store?: Store; hosted?: boolean; password?:
   app.get('/api/state', async (_req, res) => res.json(await (await store()).read()));
   app.get('/api/export', async (_req, res) => {
     res.setHeader('Content-Disposition', 'attachment; filename="streakify-backup.json"'); res.json(await (await store()).read());
+  });
+  app.get('/api/export/csv', async (_req, res) => {
+    res.setHeader('Content-Disposition', 'attachment; filename="streakify-check-ins.csv"');
+    res.type('text/csv').send(checkInsCsv(await (await store()).read()));
   });
   app.post('/api/command', async (req, res) => {
     if (typeof req.body?.requestId !== 'string' || req.body.requestId.length > 100 || !req.body.requestId) { res.status(400).json({ error: 'A request ID is required.' }); return; }

@@ -14,7 +14,7 @@ test('HTTP API protects all data, validates origins, limits login, and supports 
   const base = `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
   const post = (path: string, body: unknown, cookie = '', origin = base) => fetch(base + path, { method: 'POST', headers: { 'Content-Type': 'application/json', Cookie: cookie, Origin: origin }, body: JSON.stringify(body) });
   try {
-    for (const path of ['/api/state', '/api/export']) assert.equal((await fetch(base + path)).status, 401);
+    for (const path of ['/api/state', '/api/export', '/api/export/csv']) assert.equal((await fetch(base + path)).status, 401);
     assert.equal((await post('/api/import', newState())).status, 401);
     assert.equal((await post('/api/command', {})).status, 401);
     assert.equal((await post('/api/auth', { password }, '', 'https://unrelated.example')).status, 403);
@@ -30,6 +30,10 @@ test('HTTP API protects all data, validates origins, limits login, and supports 
     const exported = await fetch(base + '/api/export', { headers: { Cookie: cookie } });
     assert.match(exported.headers.get('cache-control')!, /no-store/);
     assert.match(exported.headers.get('content-disposition')!, /attachment/);
+    const csv = await fetch(base + '/api/export/csv', { headers: { Cookie: cookie } });
+    assert.equal(csv.status, 200);
+    assert.match(csv.headers.get('content-type')!, /text\/csv/);
+    assert.match(await csv.text(), /"Date","Habit"/);
     assert.equal((await post('/api/auth', { logout: true }, cookie)).headers.get('set-cookie')?.includes('Max-Age=0'), true);
     for (let i = 0; i < 8; i++) await post('/api/auth', { password: 'incorrect' });
     assert.equal((await post('/api/auth', { password })).status, 429);
