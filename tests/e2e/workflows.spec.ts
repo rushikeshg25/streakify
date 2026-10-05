@@ -159,6 +159,9 @@ test('notes persist across reload, history editing, and backup restore', async (
   await page.getByRole('button', { name: 'Save note', exact: true }).click();
   await page.reload();
   await expect(page.getByText('A walk before breakfast.', { exact: true })).toBeVisible();
+  await page.getByRole('button', { name: 'Undo Morning walk', exact: true }).click();
+  await page.locator('.toast').getByRole('button', { name: 'Undo', exact: true }).click();
+  await expect(page.getByText('A walk before breakfast.', { exact: true })).toBeVisible();
   await page.getByRole('button', { name: 'Progress', exact: true }).click();
   await page.getByRole('button', { name: /^Edit note for Morning walk on/ }).click();
   await page.getByLabel('Check-in note', { exact: true }).fill('Fresh air helped.');

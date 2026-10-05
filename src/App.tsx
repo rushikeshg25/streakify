@@ -121,7 +121,7 @@ export default function App({ onSignOut }: { onSignOut?: () => Promise<void> }) 
     const ok = await run({ type: 'entry.set', habitId: habit.id, date: day, value, rested: rest });
     if (ok) {
       const rule = old?.rule ?? ruleAt(habit, day);
-      notify({ message: rest ? 'Rest day saved. Your streak is protected.' : value >= rule.target ? `${habit.name} completed. Nicely done!` : value === 0 ? 'Check-in undone.' : 'Progress saved. Keep it going.', undo: () => { void run({ type: 'entry.set', habitId: habit.id, date: day, value: old?.value ?? 0, rested: old?.rested ?? false }, 'Previous progress restored.'); setToast(null); } });
+      notify({ message: rest ? 'Rest day saved. Your streak is protected.' : value >= rule.target ? `${habit.name} completed. Nicely done!` : value === 0 ? 'Check-in undone.' : 'Progress saved. Keep it going.', undo: () => { void run({ type: 'entry.set', habitId: habit.id, date: day, value: old?.value ?? 0, rested: old?.rested ?? false, note: old?.note }, 'Previous progress restored.'); setToast(null); } });
     }
     return ok;
   }
