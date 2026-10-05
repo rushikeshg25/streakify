@@ -1,4 +1,4 @@
-import type { State } from './model';
+import type { State } from './model.js';
 
 // Quote every cell and neutralize user-entered spreadsheet formulas.
 function cell(value: string | number) {

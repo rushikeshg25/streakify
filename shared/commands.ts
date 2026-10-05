@@ -1,5 +1,5 @@
-import { addDays, balances, commandSchema, entryFor, isPaused, isScheduled, newState, rewardAvailable, ruleAt, stateSchema, streak, todayIn, weekOf, weeklyCompletions } from './model';
-import type { Command, Habit, State } from './model';
+import { addDays, balances, commandSchema, entryFor, isPaused, isScheduled, newState, rewardAvailable, ruleAt, stateSchema, streak, todayIn, weekOf, weeklyCompletions } from './model.js';
+import type { Command, Habit, State } from './model.js';
 
 export function applyCommand(previous: State, raw: Command, now = new Date(), uuid = () => crypto.randomUUID()): State {
   const command = commandSchema.parse(raw);

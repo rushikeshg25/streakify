@@ -1,5 +1,5 @@
-import { addDays, weekOf } from './model';
-import type { State } from './model';
+import { addDays, weekOf } from './model.js';
+import type { State } from './model.js';
 
 // Compare equivalent elapsed portions of adjacent weeks, never a partial week to a full one.
 export function weeklyReview(state: State, today: string, habitId = 'all') {

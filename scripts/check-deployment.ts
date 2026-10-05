@@ -1,4 +1,4 @@
-import { configurationError, databaseConnection } from '../server/config';
+import { configurationError, databaseConnection } from '../server/config.js';
 
 const error = configurationError({
   hosted: true,
