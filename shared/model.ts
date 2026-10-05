@@ -22,6 +22,7 @@ export const habitInputSchema = z.object({
 export type HabitInput = z.infer<typeof habitInputSchema>;
 export const habitSchema = habitInputSchema.omit({ rule: true }).extend({
   id, created: dateSchema, order: z.number().int().min(0), archived: z.boolean(),
+  pinned: z.boolean().optional(),
   versions: z.array(versionSchema).min(1).max(10000),
   pauses: z.array(z.object({ start: dateSchema, end: dateSchema.nullable() })),
 });
@@ -62,6 +63,7 @@ export const commandSchema = z.discriminatedUnion('type', [
   z.object({ type: z.literal('habit.save'), habitId: id.optional(), input: habitInputSchema }),
   z.object({ type: z.literal('habit.archive'), habitId: id, archived: z.boolean() }),
   z.object({ type: z.literal('habit.pause'), habitId: id, paused: z.boolean() }),
+  z.object({ type: z.literal('habit.pin'), habitId: id, pinned: z.boolean() }),
   z.object({ type: z.literal('habit.move'), habitId: id, direction: z.enum(['up', 'down']) }),
   z.object({ type: z.literal('entry.set'), habitId: id, date: dateSchema, value: amount, rested: z.boolean().optional() }),
   z.object({ type: z.literal('entry.note'), entryId: id, note: z.string().trim().max(500) }),

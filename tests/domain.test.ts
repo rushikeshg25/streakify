@@ -176,3 +176,14 @@ test('notes survive progress edits and backup round trips without changing earni
   state = log(state, '2026-09-28', 0);
   assert.equal(state.entries.length, 0);
 });
+
+test('pinning is persistent metadata that preserves ordering and old backups', () => {
+  const original = habit();
+  assert.equal(validateBackup(original).habits[0].pinned, undefined);
+  let state = applyCommand(original, { type: 'habit.pin', habitId: original.habits[0].id, pinned: true });
+  assert.equal(validateBackup(state).habits[0].pinned, true);
+  assert.equal(state.habits[0].order, original.habits[0].order);
+  assert.deepEqual(state.habits[0].versions, original.habits[0].versions);
+  state = applyCommand(state, { type: 'habit.pin', habitId: state.habits[0].id, pinned: false });
+  assert.equal(state.habits[0].pinned, false);
+});

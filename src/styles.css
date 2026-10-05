@@ -741,3 +741,8 @@
   .review-leaders { padding: 20px 0 0; border-left: 0; border-top: 1px solid var(--line); }
   .review-count { font-size: 32px; }
 }
+.pin-label { display: inline-flex; align-items: center; gap: 3px; font-size: 9px; font-weight: 700; color: var(--primary); }
+.manage-actions [aria-pressed=true] { background: var(--tint); color: var(--primary); }
+.management-search { position: relative; max-width: 440px; margin: 0 0 20px; }
+.management-search svg { position: absolute; top: 14px; left: 13px; color: var(--muted); }
+.management-search input { padding-left: 40px; font-weight: 400; }
