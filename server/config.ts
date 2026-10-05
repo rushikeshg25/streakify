@@ -1,3 +1,7 @@
+export function databaseConnection(env: { DATABASE_URL?: string; POSTGRES_URL?: string }): string | undefined {
+  return env.DATABASE_URL || env.POSTGRES_URL || undefined;
+}
+
 type Configuration = { hosted: boolean; password?: string; secret?: string; databaseUrl?: string; hasStore?: boolean };
 
 export function configurationError({ hosted, password, secret, databaseUrl, hasStore }: Configuration): string | undefined {

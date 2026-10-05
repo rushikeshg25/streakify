@@ -32,6 +32,7 @@ export function applyCommand(previous: State, raw: Command, now = new Date(), uu
       break;
     }
     case 'habit.archive': habitById(command.habitId).archived = command.archived; break;
+    case 'habit.pin': habitById(command.habitId).pinned = command.pinned; break;
     case 'habit.pause': {
       const habit = habitById(command.habitId);
       if (command.paused && !isPaused(habit, today)) habit.pauses.push({ start: today, end: null });
@@ -58,7 +59,8 @@ export function applyCommand(previous: State, raw: Command, now = new Date(), uu
       const value = command.rested ? 0 : Math.min(command.value, rule.target);
       const complete = value >= rule.target && !command.rested;
       if (complete && !old?.complete && rule.schedule === 'weekly' && weeklyCompletions(state, habit.id, command.date) >= rule.weeklyTarget) throw new Error('You’ve already met this week’s target.');
-      const entry = { id: old?.id ?? uuid(), habitId: habit.id, date: command.date, value, rule, complete, rested: !!command.rested, xp: old?.xp ?? 0, coins: old?.coins ?? 0, ...(old?.note ? { note: old.note } : {}) };
+      const note = command.note ?? old?.note;
+      const entry = { id: old?.id ?? uuid(), habitId: habit.id, date: command.date, value, rule, complete, rested: !!command.rested, xp: old?.xp ?? 0, coins: old?.coins ?? 0, ...(note ? { note } : {}) };
       if (complete && !old?.complete) {
         entry.xp = rule.xp ?? state.settings.defaultXp;
         entry.coins = rule.coins ?? state.settings.defaultCoins;
@@ -89,7 +91,7 @@ export function applyCommand(previous: State, raw: Command, now = new Date(), uu
     case 'reward.archive': {
       const reward = state.rewards.find(r => r.id === command.rewardId);
       if (!reward) throw new Error('This reward no longer exists.');
-      reward.archived = true;
+      reward.archived = command.archived ?? true;
       break;
     }
     case 'reward.redeem': {

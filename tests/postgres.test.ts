@@ -16,6 +16,9 @@ test('PostgreSQL initializes, serializes concurrent commands, restores atomicall
     const first = createPostgresStore(url.toString());
     const second = createPostgresStore(url.toString());
     await Promise.all([first.read(), second.read()]);
+    const privacy = await admin.query('SELECT relname, relrowsecurity FROM pg_class JOIN pg_namespace ON pg_namespace.oid = pg_class.relnamespace WHERE nspname = $1 AND relkind = $2', [schema, 'r']);
+    assert.equal(privacy.rows.length, 3);
+    assert.ok(privacy.rows.every(table => table.relrowsecurity), 'all app tables must deny access through public database roles');
     await first.restore(newState('UTC'));
     const now = new Date('2026-10-03T12:00:00Z');
     const create: Command = { type: 'habit.save', input: { name: 'Read', category: 'Learning', icon: 'book', color: 'green', rule: defaultRule } };
@@ -28,6 +31,15 @@ test('PostgreSQL initializes, serializes concurrent commands, restores atomicall
     assert.deepEqual(balances(state), { xp: 20, coins: 5 });
     assert.equal(state.entries.length, 1);
     await assert.rejects(() => second.command('create', complete, now), /already used/);
+    await Promise.all([
+      first.command('note', { type: 'entry.note', entryId: state.entries[0].id, note: 'Notes survive concurrent writes.' }, now),
+      second.command('pin', { type: 'habit.pin', habitId: state.habits[0].id, pinned: true }, now),
+    ]);
+    state = await second.read();
+    assert.equal(state.entries[0].note, 'Notes survive concurrent writes.');
+    assert.equal(state.habits[0].pinned, true);
+    await first.restore(JSON.parse(JSON.stringify(state)));
+    assert.deepEqual(await second.read(), state);
     await assert.rejects(() => second.restore({ ...state, transactions: [] }), /balances/);
     assert.deepEqual(await first.read(), state);
     await second.restore(newState('UTC'));

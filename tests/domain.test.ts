@@ -176,3 +176,43 @@ test('notes survive progress edits and backup round trips without changing earni
   state = log(state, '2026-09-28', 0);
   assert.equal(state.entries.length, 0);
 });
+
+test('pinning is persistent metadata that preserves ordering and old backups', () => {
+  const original = habit();
+  assert.equal(validateBackup(original).habits[0].pinned, undefined);
+  let state = applyCommand(original, { type: 'habit.pin', habitId: original.habits[0].id, pinned: true });
+  assert.equal(validateBackup(state).habits[0].pinned, true);
+  assert.equal(state.habits[0].order, original.habits[0].order);
+  assert.deepEqual(state.habits[0].versions, original.habits[0].versions);
+  state = applyCommand(state, { type: 'habit.pin', habitId: state.habits[0].id, pinned: false });
+  assert.equal(state.habits[0].pinned, false);
+});
+
+test('archived rewards can be restored without changing past redemptions', () => {
+  let state = log(habit(), '2026-09-28');
+  state = applyCommand(state, { type: 'reward.save', input: { name: 'Coffee', description: '', cost: 5, icon: 'coffee', limit: 'daily' } }, at('2026-09-28'));
+  const rewardId = state.rewards[0].id;
+  state = applyCommand(state, { type: 'reward.redeem', rewardId }, at('2026-09-28'));
+  const redemptions = structuredClone(state.redemptions);
+  state = applyCommand(state, { type: 'reward.archive', rewardId });
+  assert.equal(state.rewards[0].archived, true);
+  state = applyCommand(state, { type: 'reward.archive', rewardId, archived: false });
+  assert.equal(state.rewards[0].archived, false);
+  assert.deepEqual(state.redemptions, redemptions);
+  assert.deepEqual(balances(state), { xp: 20, coins: 0 });
+});
+
+test('restoring a removed check-in can restore its note atomically', () => {
+  let state = log(habit(), '2026-09-28');
+  state = applyCommand(state, { type: 'entry.note', entryId: state.entries[0].id, note: 'A useful reflection.' });
+  const original = state.entries[0];
+  state = log(state, '2026-09-28', 0);
+  assert.equal(state.entries.length, 0);
+  assert.deepEqual(balances(state), { xp: 0, coins: 0 });
+  const restore = { type: 'entry.set' as const, habitId: original.habitId, date: original.date, value: original.value, note: original.note };
+  assert.throws(() => applyCommand(state, { ...restore, note: 'a'.repeat(501) }, at('2026-09-28')));
+  state = applyCommand(state, restore, at('2026-09-28'));
+  assert.equal(state.entries[0].note, original.note);
+  assert.deepEqual(balances(state), { xp: 20, coins: 5 });
+  assert.deepEqual(validateBackup(state), state);
+});
