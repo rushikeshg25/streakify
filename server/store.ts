@@ -1,9 +1,9 @@
 import { DatabaseSync } from 'node:sqlite';
 import { mkdirSync } from 'node:fs';
 import { dirname } from 'node:path';
-import { applyCommand, validateBackup } from '../shared/commands';
-import { newState } from '../shared/model';
-import type { Command, State } from '../shared/model';
+import { applyCommand, validateBackup } from '../shared/commands.js';
+import { newState } from '../shared/model.js';
+import type { Command, State } from '../shared/model.js';
 
 const collections = ['habits', 'entries', 'rewards', 'redemptions', 'transactions'] as const;
 export function createStore(filename: string) {

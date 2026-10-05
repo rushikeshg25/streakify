@@ -2,7 +2,7 @@ import express from 'express';
 import { resolve } from 'node:path';
 import { existsSync } from 'node:fs';
 import { loadEnvFile } from 'node:process';
-import { createApi } from './api';
+import { createApi } from './api.js';
 
 if (existsSync('.env')) loadEnvFile('.env');
 const app = express();

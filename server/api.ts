@@ -2,10 +2,10 @@ import express from 'express';
 import { createHmac } from 'node:crypto';
 import { resolve } from 'node:path';
 import { ZodError } from 'zod';
-import type { Command, State } from '../shared/model';
-import { createSession, sameSecret, validSession } from './auth';
-import { configurationError, databaseConnection } from './config';
-import { checkInsCsv } from '../shared/export';
+import type { Command, State } from '../shared/model.js';
+import { createSession, sameSecret, validSession } from './auth.js';
+import { configurationError, databaseConnection } from './config.js';
+import { checkInsCsv } from '../shared/export.js';
 
 export type Store = {
   read(): State | Promise<State>;
@@ -28,10 +28,10 @@ export function createApi(options: { store?: Store; hosted?: boolean; password?:
     storePromise ??= (async () => {
       if (options.store) return options.store;
       if (databaseUrl) {
-        const { createPostgresStore } = await import('./postgres'); return createPostgresStore(databaseUrl);
+        const { createPostgresStore } = await import('./postgres.js'); return createPostgresStore(databaseUrl);
       }
       if (hosted) throw new Error('DATABASE_URL is missing. Add your PostgreSQL connection in Vercel settings.');
-      const { createStore } = await import('./store'); return createStore(process.env.STREAKIFY_DB ?? resolve('data/streakify.sqlite'));
+      const { createStore } = await import('./store.js'); return createStore(process.env.STREAKIFY_DB ?? resolve('data/streakify.sqlite'));
     })().catch(error => { storePromise = undefined; throw error; });
     return storePromise;
   }

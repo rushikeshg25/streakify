@@ -1,8 +1,8 @@
 import { Pool } from 'pg';
 import type { PoolClient } from 'pg';
-import { applyCommand, validateBackup } from '../shared/commands';
-import { newState } from '../shared/model';
-import type { Command, State } from '../shared/model';
+import { applyCommand, validateBackup } from '../shared/commands.js';
+import { newState } from '../shared/model.js';
+import type { Command, State } from '../shared/model.js';
 
 export function createPostgresStore(connectionString: string) {
   async function withClient<T>(fn: (client: PoolClient) => Promise<T>): Promise<T> {
