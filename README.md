@@ -10,12 +10,14 @@ A responsive, configurable habit tracker with XP, levels, coins, and personal re
 
    | Variable | Value |
    | --- | --- |
-   | `DATABASE_URL` | Your standard `postgresql://…` URI. Prefer your provider's pooled endpoint for serverless workloads. Include the SSL parameters supplied by your provider. |
+   | `DATABASE_URL` | Your standard `postgresql://…` URI. Optional when the Supabase/Vercel integration already supplies `POSTGRES_URL`. Prefer your provider's pooled endpoint for serverless workloads. Include the SSL parameters supplied by your provider. |
    | `APP_PASSWORD` | A private workspace password of at least 12 characters. |
    | `SESSION_SECRET` | A random secret of at least 32 characters. Generate it with your password manager, or `openssl rand -hex 32` if you prefer a terminal. |
 
 4. Click **Deploy**. When it finishes, open the site and sign in with your `APP_PASSWORD`. Database tables are created automatically at sign-in.
 5. In Settings, choose your timezone and week start **before your first check-in**.
+
+`DATABASE_URL` takes precedence when both connection variables are set. The Supabase integration can keep managing `POSTGRES_URL`; no secret copying is required.
 
 The database user must be able to create tables in its default schema. The app initializes its `streakify_*` tables on the first authenticated database operation, including sign-in. Use a separate database or schema for this app. If your database restricts network access, it must allow connections from Vercel's execution environment.
 
@@ -92,7 +94,7 @@ Notes are optional, limited to 500 characters, and attach to existing check-ins 
 
 ## Data and backups
 
-PostgreSQL stores the personal workspace as a versioned JSONB document, with separate request-deduplication and login-limit tables. A row lock serializes mutations across Vercel invocations. Connections are opened and closed within each request, so no background process or connection keeper is required. There is no polling or recurring database work while the page is idle.
+PostgreSQL stores the personal workspace as a versioned JSONB document, with separate request-deduplication and login-limit tables. Row-level security blocks public API roles; the server connects as the table owner. A row lock serializes mutations across Vercel invocations. Connections are opened and closed within each request, so no background process or connection keeper is required. There is no polling or recurring database work while the page is idle.
 
 The local SQLite adapter stores the same domain records in tables. Both adapters run the same validated commands. JSON export/import transfers data between local and hosted workspaces.
 

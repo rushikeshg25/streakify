@@ -16,6 +16,9 @@ test('PostgreSQL initializes, serializes concurrent commands, restores atomicall
     const first = createPostgresStore(url.toString());
     const second = createPostgresStore(url.toString());
     await Promise.all([first.read(), second.read()]);
+    const privacy = await admin.query('SELECT relname, relrowsecurity FROM pg_class JOIN pg_namespace ON pg_namespace.oid = pg_class.relnamespace WHERE nspname = $1 AND relkind = $2', [schema, 'r']);
+    assert.equal(privacy.rows.length, 3);
+    assert.ok(privacy.rows.every(table => table.relrowsecurity), 'all app tables must deny access through public database roles');
     await first.restore(newState('UTC'));
     const now = new Date('2026-10-03T12:00:00Z');
     const create: Command = { type: 'habit.save', input: { name: 'Read', category: 'Learning', icon: 'book', color: 'green', rule: defaultRule } };

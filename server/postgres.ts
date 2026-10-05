@@ -20,6 +20,11 @@ export function createPostgresStore(connectionString: string) {
         await client.query('CREATE TABLE IF NOT EXISTS streakify_workspace (id INTEGER PRIMARY KEY CHECK(id=1), payload JSONB NOT NULL)');
         await client.query('CREATE TABLE IF NOT EXISTS streakify_requests (id TEXT PRIMARY KEY, body JSONB NOT NULL)');
         await client.query('CREATE TABLE IF NOT EXISTS streakify_login_attempts (id TEXT PRIMARY KEY, attempts INTEGER NOT NULL, window_start TIMESTAMPTZ NOT NULL)');
+        // Supabase exposes public-schema tables through its Data API. Only the table owner
+        // (the server connection) should access this single-user workspace.
+        for (const table of ['streakify_workspace', 'streakify_requests', 'streakify_login_attempts']) {
+          await client.query(`ALTER TABLE ${table} ENABLE ROW LEVEL SECURITY`);
+        }
         await client.query('INSERT INTO streakify_workspace VALUES (1, $1) ON CONFLICT DO NOTHING', [JSON.stringify(newState())]);
         await client.query('COMMIT');
       } catch (error) { await client.query('ROLLBACK'); throw error; }
