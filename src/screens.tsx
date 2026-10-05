@@ -5,6 +5,7 @@ import { addDays, balances, isScheduled, rewardAvailable, ruleAt, streak, weekOf
 import type { RunCommand } from './App';
 import { Coin, dateLabel, Empty, Modal, Symbol } from './ui';
 import { NoteForm } from './NoteForm';
+import { WeeklyReview } from './WeeklyReview';
 
 export function ProgressScreen({ state, today, busy, run }: { state: State; today: string; busy: boolean; run: RunCommand }) {
   const [month, setMonth] = useState(today.slice(0, 7));
@@ -31,6 +32,7 @@ export function ProgressScreen({ state, today, busy, run }: { state: State; toda
   return <>
     <div className="page-heading"><div><p className="date-heading">Every check-in tells a story</p><h1>Look how far you’ve come.</h1><p>Find your rhythm, celebrate your effort, and keep growing.</p></div><select className="habit-filter" aria-label="Filter progress by habit" value={habitId} onChange={e => setHabitId(e.target.value)}><option value="all">All habits</option>{state.habits.map(h => <option key={h.id} value={h.id}>{h.name}{h.archived ? ' (archived)' : ''}</option>)}</select></div>
     <div className="stats-grid"><div className="stat-card"><span className="stat-icon green"><Check size={22} /></span><strong>{complete.length}</strong><span>Total completions</span></div>{state.settings.showStreaks && <div className="stat-card"><span className="stat-icon orange"><Flame size={22} /></span><strong>{best}</strong><span>Best current streak*</span></div>}{state.settings.showXp && <><div className="stat-card"><span className="stat-icon purple"><Zap size={22} /></span><strong>{balance.xp}</strong><span>Lifetime XP · all habits</span></div><div className="stat-card"><span className="stat-icon blue"><Sparkles size={22} /></span><strong>{earnedWeek}</strong><span>XP in the last 7 days · all habits</span></div></>}</div>
+    <WeeklyReview state={state} today={today} habitId={habitId} />
     <div className="progress-layout"><section className="panel calendar-panel"><div className="section-heading"><h2>Your consistency</h2><div className="date-nav"><button className="icon-button" aria-label="Previous month" onClick={() => { setMonth(addDays(start, -1).slice(0,7)); setSelected(null); }}><ChevronLeft size={18} /></button><strong>{dateLabel(start, { month: 'long', year: 'numeric' })}</strong><button className="icon-button" aria-label="Next month" disabled={month >= today.slice(0,7)} onClick={() => { setMonth(nextMonth.slice(0,7)); setSelected(null); }}><ChevronRight size={18} /></button></div></div><div className="calendar-weekdays">{Array.from({length:7},(_,i)=>(i+state.settings.weekStart)%7).map(d => <span key={d}>{['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][d]}</span>)}</div><div className="calendar-grid">{Array.from({length:offset},(_,i)=><span key={`space-${i}`} />)}{Array.from({length:monthDays},(_,i)=>addDays(start,i)).map(day => {
       const done = complete.filter(e => e.date === day).length;
       const resting = entries.some(e => e.date === day && e.rested);
