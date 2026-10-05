@@ -2,15 +2,30 @@
 
 A responsive, configurable habit tracker with XP, levels, coins, and personal rewards. Built for a private, single-user workspace on **Vercel Hobby**, using **your PostgreSQL connection URI** for durable storage.
 
-## One-click deploy
+## Deploy from the Vercel dashboard
 
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Frushikeshg25%2Fstreakify&project-name=streakify&repository-name=streakify&env=DATABASE_URL%2CAPP_PASSWORD%2CSESSION_SECRET&envDescription=PostgreSQL+URI%2C+a+workspace+password+%2812%2B+characters%29%2C+and+a+random+session+secret+%2832%2B+characters%29.+See+the+setup+guide+for+details.&envLink=https%3A%2F%2Fgithub.com%2Frushikeshg25%2Fstreakify%23one-click-deploy)
+1. In the [Vercel dashboard](https://vercel.com/dashboard), choose **Add New → Project** and import your **streakify** GitHub repository. Connect GitHub if prompted.
+2. Keep the **Root Directory** at the repository root (`./`). The repository already configures **Vite**, **Node.js 22.x**, the install/build commands, and the output directory, so no build-setting overrides are needed.
+3. Expand **Environment Variables** and add:
 
-Click **Deploy with Vercel** to create your own repository and project. Vercel asks for three private values before building: your PostgreSQL connection URI, a workspace password of at least 12 characters, and a random session secret of at least 32 characters. Generate the secret with `openssl rand -hex 32`. The build settings and API function are already configured. No CLI or code changes are required.
+   | Variable | Value |
+   | --- | --- |
+   | `DATABASE_URL` | Your standard `postgresql://…` URI. Prefer your provider's pooled endpoint for serverless workloads. Include the SSL parameters supplied by your provider. |
+   | `APP_PASSWORD` | A private workspace password of at least 12 characters. |
+   | `SESSION_SECRET` | A random secret of at least 32 characters. Generate it with your password manager, or `openssl rand -hex 32` if you prefer a terminal. |
 
-Bring a PostgreSQL database (for example, Neon or Supabase), preferably its pooled connection URI. The button does not provision a database or select a paid plan. Tables are created automatically when you sign in. Missing or malformed configuration stops the deployment with a clear error; a valid URI still needs a reachable database.
+4. Click **Deploy**. When it finishes, open the site and sign in with your `APP_PASSWORD`. Database tables are created automatically at sign-in.
+5. In Settings, choose your timezone and week start **before your first check-in**.
 
-If you already own this repository, [import the existing repository](https://vercel.com/new/import?s=https%3A%2F%2Fgithub.com%2Frushikeshg25%2Fstreakify) to connect it directly instead of cloning a second copy.
+The database user must be able to create tables in its default schema. The app initializes its `streakify_*` tables on the first authenticated database operation, including sign-in. Use a separate database or schema for this app. If your database restricts network access, it must allow connections from Vercel's execution environment.
+
+Do not prefix these variables with `VITE_`; that would expose them to the browser. Production fails closed if login configuration or the database URI is missing. Password changes invalidate existing sessions. Preview deployments should use a separate database to avoid changing production habits.
+
+The application uses static assets and **one Node API function**, with no cron jobs, persistent server, paid Vercel add-ons, or filesystem writes in deployed mode. Your database is supplied separately. Vercel Hobby is intended for personal, non-commercial use, and provider usage limits still apply. See [Vercel Hobby](https://vercel.com/docs/plans/hobby) and [Vercel Node functions](https://vercel.com/docs/functions/runtimes/node-js).
+
+Missing or malformed environment values produce a clear build error. Correct them in **Project Settings → Environment Variables**, then redeploy from the **Deployments** tab. Future pushes to the connected production branch deploy automatically.
+
+No local setup or CLI is required for deployment. Supply your database URI in the dashboard; the repository contains no credentials.
 
 ## Run locally
 
@@ -32,29 +47,6 @@ npm start
 ```
 
 The production build serves the same UI and API locally. Vercel uses the static build and API function directly; it does not run `npm start`.
-
-## Manual deployment / existing repository
-
-1. Push this project to your Git provider and import it into Vercel.
-2. Select the **Vite** framework preset, build command **`npm run build:vercel`**, output directory **`dist`**, and Node.js **22.x**. These build defaults are also in `vercel.json`.
-3. Add these **server-side** environment variables to the deployment:
-
-   | Variable | Value |
-   | --- | --- |
-   | `DATABASE_URL` | Your standard `postgresql://…` URI. Prefer your provider's pooled endpoint for serverless workloads. Include the SSL parameters supplied by your provider. |
-   | `APP_PASSWORD` | A private workspace password of at least 12 characters. |
-   | `SESSION_SECRET` | A random secret of at least 32 characters. Generate one with `openssl rand -hex 32`. |
-
-4. Deploy and open the site. Sign in with the workspace password.
-5. In Settings, choose your timezone and week start **before your first check-in**.
-
-The database user must be able to create tables in its default schema. The app initializes its `streakify_*` tables on the first authenticated database operation, including sign-in. Use a separate database or schema for this app. If your database restricts network access, it must allow connections from Vercel's execution environment.
-
-Do not prefix these variables with `VITE_`; that would expose them to the browser. Production fails closed if login configuration or the database URI is missing. Password changes invalidate existing sessions. Preview deployments should use a separate database to avoid changing production habits.
-
-The application uses static assets and **one Node API function**, with no cron jobs, persistent server, paid Vercel add-ons, or filesystem writes in deployed mode. Your database is supplied separately. Vercel Hobby is intended for personal, non-commercial use, and provider usage limits still apply. See [Vercel Hobby](https://vercel.com/docs/plans/hobby) and [Vercel Node functions](https://vercel.com/docs/functions/runtimes/node-js).
-
-The Deploy button starts Vercel’s guided project creation. You approve the deployment in Vercel after entering your configuration. This repository does not contain credentials or create a live database on its own.
 
 ## What is included
 
