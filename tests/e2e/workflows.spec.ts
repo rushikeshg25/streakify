@@ -146,3 +146,29 @@ test('database errors remain actionable when the workspace cannot load', async (
   await expect(page.getByText('The database could not be reached. Check the server connection and try again.', { exact: true })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Try again' })).toBeVisible();
 });
+
+test('notes persist across reload, history editing, and backup restore', async ({ page, request }) => {
+  await page.goto('/');
+  await page.getByRole('button', { name: 'New habit', exact: true }).click();
+  await page.getByLabel('Habit name', { exact: true }).fill('Morning walk');
+  await page.getByRole('button', { name: 'Create habit', exact: true }).click();
+  await page.getByRole('button', { name: 'Log Morning walk', exact: true }).click();
+  await page.getByLabel('More options for Morning walk', { exact: true }).click();
+  await page.getByRole('button', { name: 'Add note', exact: true }).click();
+  await page.getByLabel('Check-in note', { exact: true }).fill('A walk before breakfast.');
+  await page.getByRole('button', { name: 'Save note', exact: true }).click();
+  await page.reload();
+  await expect(page.getByText('A walk before breakfast.', { exact: true })).toBeVisible();
+  await page.getByRole('button', { name: 'Progress', exact: true }).click();
+  await page.getByRole('button', { name: /^Edit note for Morning walk on/ }).click();
+  await page.getByLabel('Check-in note', { exact: true }).fill('Fresh air helped.');
+  await page.getByRole('button', { name: 'Save note', exact: true }).click();
+  await page.getByRole('button', { name: 'With notes only', exact: true }).click();
+  await expect(page.getByText('Fresh air helped.', { exact: true })).toBeVisible();
+  const backup = await (await request.get('/api/export')).json();
+  expect(backup.entries[0].note).toBe('Fresh air helped.');
+  expect((await request.post('/api/import', { data: backup })).ok()).toBeTruthy();
+  await page.reload();
+  await expect(page.getByText('Fresh air helped.', { exact: true })).toBeVisible();
+  expect(backup.entries[0].xp).toBe(20);
+});
