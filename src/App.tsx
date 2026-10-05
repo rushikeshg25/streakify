@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { ArrowDown, ArrowUp, ArrowUpRight, Archive, Check, ChevronLeft, ChevronRight, CircleHelp, Clock3, Flame, Gift, LayoutGrid, ListChecks, LoaderCircle, MoreHorizontal, Search, Pause, Pencil, Play, Plus, RotateCcw, Settings2, Sparkles, Sprout, TrendingUp, X, Zap } from 'lucide-react';
+import { ArrowDown, ArrowUp, ArrowUpRight, Archive, Check, ChevronLeft, ChevronRight, CircleHelp, Clock3, Flame, Gift, LayoutGrid, ListChecks, LoaderCircle, MoreHorizontal, MessageSquare, Search, Pause, Pencil, Play, Plus, RotateCcw, Settings2, Sparkles, Sprout, TrendingUp, X, Zap } from 'lucide-react';
 import type { Command, Entry, Habit, HabitInput, Reward, State } from '../shared/model';
 import { addDays, balances, entryFor, isDue, isPaused, ruleAt, streak, templates, todayIn, weekOf, weeklyCompletions } from '../shared/model';
 import { Coin, dateLabel, Empty, Modal, scheduleLabel, Symbol } from './ui';
 import { HabitForm, RewardForm } from './forms';
+import { NoteForm } from './NoteForm';
 import { ProgressScreen, RewardsScreen, SettingsScreen } from './screens';
 
 export type RunCommand = (command: Command, message?: string) => Promise<boolean>;
@@ -22,6 +23,7 @@ export default function App({ onSignOut }: { onSignOut?: () => Promise<void> }) 
   const [rewardForm, setRewardForm] = useState<{ reward?: Reward } | null>(null);
   const [logForm, setLogForm] = useState<{ habit: Habit; date: string } | null>(null);
   const [help, setHelp] = useState(false);
+  const [noteId, setNoteId] = useState<string | null>(null);
   const [now, setNow] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [filter, setFilter] = useState('All habits');
@@ -71,6 +73,7 @@ export default function App({ onSignOut }: { onSignOut?: () => Promise<void> }) 
   function navigate(next: Page) { setPage(next); location.hash = next; setFilter('All habits'); setStatusFilter('all'); setSearch(''); window.scrollTo({ top: 0 }); }
   if (!state) return <div className="loading-screen"><span className="brand-mark"><Zap fill="currentColor" size={26} /></span><h1>Streakify</h1>{error ? <><p>{error}</p><button className="button primary" onClick={() => void refresh()}>Try again</button></> : <><LoaderCircle className="spin" size={24} /><p>Making room for better days…</p></>}</div>;
 
+  const noteEntry = state.entries.find(entry => entry.id === noteId);
   const today = todayIn(state.settings.timezone, now);
   const date = selectedDate ?? today;
   const balance = balances(state);
@@ -115,12 +118,12 @@ export default function App({ onSignOut }: { onSignOut?: () => Promise<void> }) 
     const done = entry?.complete;
     return <article key={habit.id} className={`habit-row ${done && !manage ? 'is-complete' : ''}`}>
       <span className={`habit-icon ${habit.color}`}><Symbol name={habit.icon} size={23} /></span>
-      <div className="habit-body"><div className="habit-title"><h3>{habit.name}</h3>{manage && paused && <span className="badge">Paused</span>}{habit.archived && <span className="badge">Archived</span>}</div><div className="habit-meta"><span>{habit.category}</span><i />{manage ? <span>{scheduleLabel(rule)}</span> : <span>{rule.type === 'check' ? rule.schedule === 'weekly' ? `${weeklyCompletions(state, habit.id, date)} / ${rule.weeklyTarget} this week` : 'One small step' : `${entry?.value ?? 0} / ${rule.target} ${rule.unit}`}</span>}</div>{!manage && rule.type !== 'check' && <div className="habit-progress"><div style={{ width: `${Math.min(100, (entry?.value ?? 0) / rule.target * 100)}%` }} /></div>}{manage && pending && <small className="pending-note">Rule changes start {dateLabel(pending.effective)}</small>}</div>
+      <div className="habit-body"><div className="habit-title"><h3>{habit.name}</h3>{manage && paused && <span className="badge">Paused</span>}{habit.archived && <span className="badge">Archived</span>}</div><div className="habit-meta"><span>{habit.category}</span><i />{manage ? <span>{scheduleLabel(rule)}</span> : <span>{rule.type === 'check' ? rule.schedule === 'weekly' ? `${weeklyCompletions(state, habit.id, date)} / ${rule.weeklyTarget} this week` : 'One small step' : `${entry?.value ?? 0} / ${rule.target} ${rule.unit}`}</span>}</div>{!manage && rule.type !== 'check' && <div className="habit-progress"><div style={{ width: `${Math.min(100, (entry?.value ?? 0) / rule.target * 100)}%` }} /></div>}{!manage && entry?.note && <button className="entry-note-preview" onClick={() => setNoteId(entry.id)} aria-label={`Edit note for ${habit.name}`}><MessageSquare size={12} /><span>{entry.note}</span></button>}{manage && pending && <small className="pending-note">Rule changes start {dateLabel(pending.effective)}</small>}</div>
       {!manage && state.settings.showStreaks && currentStreak > 0 && <span className="streak-badge" title={rule.schedule === 'weekly' ? 'Consecutive successful weeks' : 'Consecutive scheduled days'}><Flame size={15} />{currentStreak}{rule.schedule === 'weekly' ? 'w' : 'd'}</span>}
       {!manage && <div className="habit-earnings">{state.settings.showXp && <span>+{entry?.complete ? entry.xp : rule.xp ?? state.settings.defaultXp} XP</span>}{state.settings.showCoins && <small><Coin size={13} />{entry?.complete ? entry.coins : rule.coins ?? state.settings.defaultCoins}</small>}</div>}
       {manage ? <div className="manage-actions"><button className="icon-button" title="Move up" aria-label={`Move ${habit.name} up`} disabled={busy || habit.archived} onClick={() => void run({ type: 'habit.move', habitId: habit.id, direction: 'up' })}><ArrowUp size={16} /></button><button className="icon-button" title="Move down" aria-label={`Move ${habit.name} down`} disabled={busy || habit.archived} onClick={() => void run({ type: 'habit.move', habitId: habit.id, direction: 'down' })}><ArrowDown size={16} /></button><button className="icon-button" aria-label={`Edit ${habit.name}`} onClick={() => setHabitForm({ habit })}><Pencil size={17} /></button><button className="icon-button" aria-label={`${paused ? 'Resume' : 'Pause'} ${habit.name}`} disabled={busy || habit.archived} onClick={() => void run({ type: 'habit.pause', habitId: habit.id, paused: !paused }, paused ? 'Habit resumed.' : 'Habit paused. Your history is safe.')} >{paused ? <Play size={17} /> : <Pause size={17} />}</button><button className="icon-button" aria-label={`${habit.archived ? 'Restore' : 'Archive'} ${habit.name}`} disabled={busy} onClick={() => habit.archived ? void run({ type: 'habit.archive', habitId: habit.id, archived: false }, 'Habit restored.') : setConfirm({ title: 'Archive this habit?', text: `“${habit.name}” will leave your daily list. Your history and earnings stay, and you can restore it anytime.`, action: () => run({ type: 'habit.archive', habitId: habit.id, archived: true }, 'Habit archived.') })}>{habit.archived ? <RotateCcw size={17} /> : <Archive size={17} />}</button></div>
         : <>{done ? <button className="complete-button" aria-label={`Undo ${habit.name}`} disabled={busy} onClick={() => void log(habit, date, 0)}><Check size={19} /><span>Done</span></button> : entry?.rested ? <button className="rest-button" disabled={busy} onClick={() => void log(habit, date, 0)}>Rest day <RotateCcw size={14} /></button> : <button className="log-button" aria-label={`Log ${habit.name}`} disabled={busy} onClick={() => openLog(habit)}><Plus size={19} /><span>{rule.type === 'check' ? 'Check in' : 'Log progress'}</span></button>}
-        <details className="row-menu"><summary aria-label={`More options for ${habit.name}`}><MoreHorizontal size={20} /></summary><div><button onClick={e => { e.currentTarget.closest('details')?.removeAttribute('open'); setHabitForm({ habit }); }}><Pencil size={15} />Edit habit</button><button disabled={busy} onClick={e => { e.currentTarget.closest('details')?.removeAttribute('open'); void log(habit, date, 0, !entry?.rested); }}><LeafIcon />{entry?.rested ? 'Remove rest day' : 'Take a rest day'}</button></div></details></>}
+        <details className="row-menu"><summary aria-label={`More options for ${habit.name}`}><MoreHorizontal size={20} /></summary><div>{entry && <button onClick={e => { e.currentTarget.closest('details')?.removeAttribute('open'); setNoteId(entry.id); }}><MessageSquare size={15} />{entry.note ? 'Edit note' : 'Add note'}</button>}<button onClick={e => { e.currentTarget.closest('details')?.removeAttribute('open'); setHabitForm({ habit }); }}><Pencil size={15} />Edit habit</button><button disabled={busy} onClick={e => { e.currentTarget.closest('details')?.removeAttribute('open'); void log(habit, date, 0, !entry?.rested); }}><LeafIcon />{entry?.rested ? 'Remove rest day' : 'Take a rest day'}</button></div></details></>}
     </article>;
   };
 
@@ -167,6 +170,7 @@ export default function App({ onSignOut }: { onSignOut?: () => Promise<void> }) 
         {page === 'settings' && <SettingsScreen state={state} busy={busy} run={run} restore={next => { setState(next); setSelectedDate(null); notify({ message: 'Backup restored. Welcome back.' }); }} notify={message => notify({ message, error: true })} />}
       </main>
     </div>
+    {noteEntry && <NoteForm entry={noteEntry} habitName={state.habits.find(h => h.id === noteEntry.habitId)!.name} busy={busy} run={run} onClose={() => setNoteId(null)} />}
     {habitForm && <HabitForm {...habitForm} settings={state.settings} busy={busy} onClose={() => setHabitForm(null)} onSave={input => run({ type: 'habit.save', habitId: habitForm.habit?.id, input }, habitForm.habit ? 'Habit updated. Rule changes are scheduled.' : 'A new habit, a fresh start.')} />}
     {rewardForm && <RewardForm {...rewardForm} busy={busy} onClose={() => setRewardForm(null)} onSave={input => run({ type: 'reward.save', rewardId: rewardForm.reward?.id, input }, 'Reward saved. Something good to work toward.')} />}
     {logForm && <LogForm habit={logForm.habit} entry={entryFor(state, logForm.habit.id, logForm.date)} date={logForm.date} busy={busy} onClose={() => setLogForm(null)} onSave={value => log(logForm.habit, logForm.date, value)} />}

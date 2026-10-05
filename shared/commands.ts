@@ -58,7 +58,7 @@ export function applyCommand(previous: State, raw: Command, now = new Date(), uu
       const value = command.rested ? 0 : Math.min(command.value, rule.target);
       const complete = value >= rule.target && !command.rested;
       if (complete && !old?.complete && rule.schedule === 'weekly' && weeklyCompletions(state, habit.id, command.date) >= rule.weeklyTarget) throw new Error('You’ve already met this week’s target.');
-      const entry = { id: old?.id ?? uuid(), habitId: habit.id, date: command.date, value, rule, complete, rested: !!command.rested, xp: old?.xp ?? 0, coins: old?.coins ?? 0 };
+      const entry = { id: old?.id ?? uuid(), habitId: habit.id, date: command.date, value, rule, complete, rested: !!command.rested, xp: old?.xp ?? 0, coins: old?.coins ?? 0, ...(old?.note ? { note: old.note } : {}) };
       if (complete && !old?.complete) {
         entry.xp = rule.xp ?? state.settings.defaultXp;
         entry.coins = rule.coins ?? state.settings.defaultCoins;
@@ -69,6 +69,13 @@ export function applyCommand(previous: State, raw: Command, now = new Date(), uu
       transaction(entry.id, entry.xp - (old?.xp ?? 0), entry.coins - (old?.coins ?? 0), `${complete ? 'Completed' : command.rested ? 'Rest day' : 'Updated'}: ${habit.name}`);
       state.entries = state.entries.filter(e => e.id !== entry.id);
       if (value || entry.rested) state.entries.push(entry);
+      break;
+    }
+    case 'entry.note': {
+      const entry = state.entries.find(e => e.id === command.entryId);
+      if (!entry) throw new Error('This check-in no longer exists. Refresh and try again.');
+      if (command.note) entry.note = command.note;
+      else delete entry.note;
       break;
     }
     case 'reward.save': {

@@ -38,6 +38,7 @@ export const settingsSchema = z.object({
 export type Settings = z.infer<typeof settingsSchema>;
 export const entrySchema = z.object({
   id, habitId: id, date: dateSchema, value: amount, rule: ruleSchema,
+  note: z.string().trim().max(500).optional(),
   xp: z.number().int().min(0).max(200000), coins: amount, complete: z.boolean(), rested: z.boolean(),
 });
 export type Entry = z.infer<typeof entrySchema>;
@@ -63,6 +64,7 @@ export const commandSchema = z.discriminatedUnion('type', [
   z.object({ type: z.literal('habit.pause'), habitId: id, paused: z.boolean() }),
   z.object({ type: z.literal('habit.move'), habitId: id, direction: z.enum(['up', 'down']) }),
   z.object({ type: z.literal('entry.set'), habitId: id, date: dateSchema, value: amount, rested: z.boolean().optional() }),
+  z.object({ type: z.literal('entry.note'), entryId: id, note: z.string().trim().max(500) }),
   z.object({ type: z.literal('reward.save'), rewardId: id.optional(), input: rewardInputSchema }),
   z.object({ type: z.literal('reward.archive'), rewardId: id }),
   z.object({ type: z.literal('reward.redeem'), rewardId: id }),

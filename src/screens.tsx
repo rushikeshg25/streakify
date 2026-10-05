@@ -1,15 +1,19 @@
 import { useRef, useState } from 'react';
-import { Archive, ArrowDownToLine, ArrowUpFromLine, CalendarDays, Check, ChevronLeft, ChevronRight, Flame, Gift, Pencil, Plus, RotateCcw, Save, ShieldCheck, Sparkles, Sprout, Zap } from 'lucide-react';
+import { Archive, ArrowDownToLine, ArrowUpFromLine, CalendarDays, Check, ChevronLeft, ChevronRight, Flame, Gift, MessageSquare, Pencil, Plus, RotateCcw, Save, ShieldCheck, Sparkles, Sprout, Zap } from 'lucide-react';
 import type { Reward, Settings, State } from '../shared/model';
 import { addDays, balances, isScheduled, rewardAvailable, ruleAt, streak, weekOf, weekday } from '../shared/model';
 import type { RunCommand } from './App';
 import { Coin, dateLabel, Empty, Modal, Symbol } from './ui';
+import { NoteForm } from './NoteForm';
 
 export function ProgressScreen({ state, today, busy, run }: { state: State; today: string; busy: boolean; run: RunCommand }) {
   const [month, setMonth] = useState(today.slice(0, 7));
   const [selected, setSelected] = useState<string | null>(null);
   const [habitId, setHabitId] = useState('all');
   const [confirmEntry, setConfirmEntry] = useState<string | null>(null);
+  const [noteId, setNoteId] = useState<string | null>(null);
+  const [notesOnly, setNotesOnly] = useState(false);
+  const noteEntry = state.entries.find(entry => entry.id === noteId);
   const entries = state.entries.filter(e => habitId === 'all' || e.habitId === habitId);
   const complete = entries.filter(e => e.complete);
   const start = month + '-01';
@@ -18,7 +22,7 @@ export function ProgressScreen({ state, today, busy, run }: { state: State; toda
   const offset = (weekday(start) - state.settings.weekStart + 7) % 7;
   const balance = balances(state);
   const best = Math.max(0, ...state.habits.filter(h => habitId === 'all' || h.id === habitId).map(h => streak(state, h, today)));
-  const history = [...entries].filter(e => selected ? e.date === selected : e.date.startsWith(month)).sort((a,b) => b.date.localeCompare(a.date));
+  const history = [...entries].filter(e => !notesOnly || !!e.note).filter(e => selected ? e.date === selected : e.date.startsWith(month)).sort((a,b) => b.date.localeCompare(a.date));
   const rolling = Array.from({ length: 7 }, (_, i) => addDays(today, i - 6));
   const earnedWeek = state.entries.filter(e => e.date >= rolling[0] && e.date <= today).reduce((sum, e) => sum + e.xp, 0);
   const weeks = Array.from({ length: 8 }, (_, i) => addDays(weekOf(today, state.settings.weekStart), (i - 7) * 7));
@@ -35,8 +39,9 @@ export function ProgressScreen({ state, today, busy, run }: { state: State; toda
       return <button key={day} className={`calendar-day ${intensity} ${day === today ? 'today' : ''} ${selected === day ? 'selected' : ''}`} disabled={day > today} aria-label={`${dateLabel(day, {month:'long',day:'numeric'})}, ${done} completed${resting ? ', rest day' : ''}`} aria-pressed={selected === day} onClick={()=>setSelected(selected === day ? null : day)}><span>{iDay(day)}</span><small>{done ? <Check size={12}/> : resting ? <Sprout size={12}/> : null}</small></button>;
     })}</div><div className="calendar-legend"><span>Less</span><i/><i className="some"/><i className="full"/><span>More progress</span><button className="text-button" onClick={()=>setSelected(null)}>Show whole month</button></div></section>
     <section className="panel weekly-panel"><h2>Growing, week by week</h2><p>Completions over the last 8 weeks</p><div className="bar-chart" role="img" aria-label={weeks.map(w=>`${dateLabel(w)}: ${complete.filter(e=>e.date>=w&&e.date<addDays(w,7)).length} completions`).join('; ')}>{weeks.map(w=>{ const count=complete.filter(e=>e.date>=w&&e.date<addDays(w,7)).length; return <div className="bar-column" key={w}><span>{count}</span><div className="bar-space"><i style={{height:`${Math.max(3,count/maxWeekly*100)}%`}} /></div><small>{dateLabel(w)}</small></div>; })}</div><p className="chart-note">Consistency looks different every week. All progress counts.</p></section></div>
-    <section className="panel history-panel"><div className="section-heading"><h2>{selected ? dateLabel(selected,{month:'long',day:'numeric'}) : 'Check-in history'}</h2><span className="muted">{history.length} entries</span></div>{!history.length ? <Empty icon="book" title="Your story is just getting started" text="Your check-ins and rest days will appear here. Start with one small step on Today." /> : <div className="history-list">{history.map(entry=>{ const habit=state.habits.find(h=>h.id===entry.habitId)!; return <div className="history-row" key={entry.id}><span className={`habit-icon small ${habit.color}`}><Symbol name={habit.icon} size={19}/></span><div><strong>{habit.name}</strong><small>{dateLabel(entry.date)} · {entry.rested ? 'Rest day' : entry.complete ? 'Completed' : `${entry.value} / ${entry.rule.target} ${entry.rule.unit}`}</small></div><span className="history-earnings">{state.settings.showXp && `+${entry.xp} XP`}{state.settings.showCoins && <small><Coin size={13}/>{entry.coins}</small>}</span><button className="icon-button" aria-label={`Undo ${habit.name} on ${entry.date}`} disabled={busy} onClick={()=>setConfirmEntry(entry.id)}><RotateCcw size={17}/></button></div>; })}</div>}</section>
+    <section className="panel history-panel"><div className="section-heading"><h2>{selected ? dateLabel(selected,{month:'long',day:'numeric'}) : 'Check-in history'}</h2><div className="history-controls"><button className="text-button" aria-pressed={notesOnly} onClick={() => setNotesOnly(!notesOnly)}><MessageSquare size={15} />{notesOnly ? 'Show all check-ins' : 'With notes only'}</button><span className="muted">{history.length} entries</span></div></div>{!history.length ? <Empty icon="book" title="Your story is just getting started" text="Your check-ins and rest days will appear here. Start with one small step on Today." /> : <div className="history-list">{history.map(entry=>{ const habit=state.habits.find(h=>h.id===entry.habitId)!; return <div className="history-row" key={entry.id}><span className={`habit-icon small ${habit.color}`}><Symbol name={habit.icon} size={19}/></span><div><strong>{habit.name}</strong><small>{dateLabel(entry.date)} · {entry.rested ? 'Rest day' : entry.complete ? 'Completed' : `${entry.value} / ${entry.rule.target} ${entry.rule.unit}`}</small>{entry.note && <p className="history-note">{entry.note}</p>}</div><button className="icon-button" aria-label={`Edit note for ${habit.name} on ${entry.date}`} onClick={() => setNoteId(entry.id)}><MessageSquare size={17} /></button><span className="history-earnings">{state.settings.showXp && `+${entry.xp} XP`}{state.settings.showCoins && <small><Coin size={13}/>{entry.coins}</small>}</span><button className="icon-button" aria-label={`Undo ${habit.name} on ${entry.date}`} disabled={busy} onClick={()=>setConfirmEntry(entry.id)}><RotateCcw size={17}/></button></div>; })}</div>}</section>
     {state.settings.showStreaks && <p className="page-footnote">*Streaks count scheduled days, or successful weeks for weekly habits.</p>}
+    {noteEntry && <NoteForm entry={noteEntry} habitName={state.habits.find(h => h.id === noteEntry.habitId)!.name} busy={busy} run={run} onClose={() => setNoteId(null)} />}
     {pending && <Modal title="Undo this check-in?" onClose={()=>setConfirmEntry(null)}><p className="confirm-copy">This removes the saved progress and reverses its {pending.xp} XP and {pending.coins} coins. You can log it again from Today.</p><div className="modal-footer"><button className="button secondary" onClick={()=>setConfirmEntry(null)}>Cancel</button><button className="button primary" disabled={busy} onClick={async()=>{ if(await run({type:'entry.set',habitId:pending.habitId,date:pending.date,value:0},'Check-in undone. Earnings reversed.')) setConfirmEntry(null); }}>Undo check-in</button></div></Modal>}
   </>;
 }

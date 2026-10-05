@@ -159,3 +159,20 @@ test('backdated weekly streaks do not count completions later than the selected 
   assert.equal(streak(state, state.habits[0], '2026-09-29'), 0);
   assert.equal(streak(state, state.habits[0], '2026-09-30'), 1);
 });
+
+test('notes survive progress edits and backup round trips without changing earnings', () => {
+  let state = log(habit({ type: 'count', target: 8 }), '2026-09-28', 3);
+  const entryId = state.entries[0].id;
+  state = applyCommand(state, { type: 'entry.note', entryId, note: '  Felt better after a walk.  ' });
+  state = log(state, '2026-09-28', 8);
+  assert.equal(state.entries[0].note, 'Felt better after a walk.');
+  assert.deepEqual(balances(state), { xp: 20, coins: 5 });
+  assert.deepEqual(validateBackup(JSON.parse(JSON.stringify(state))), state);
+  assert.throws(() => applyCommand(state, { type: 'entry.note', entryId, note: 'a'.repeat(501) }));
+  assert.throws(() => applyCommand(state, { type: 'entry.note', entryId: 'missing', note: 'test' }), /no longer exists/);
+  state = applyCommand(state, { type: 'entry.note', entryId, note: ' ' });
+  assert.equal(state.entries[0].note, undefined);
+  assert.deepEqual(balances(state), { xp: 20, coins: 5 });
+  state = log(state, '2026-09-28', 0);
+  assert.equal(state.entries.length, 0);
+});
