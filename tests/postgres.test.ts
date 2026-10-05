@@ -28,6 +28,15 @@ test('PostgreSQL initializes, serializes concurrent commands, restores atomicall
     assert.deepEqual(balances(state), { xp: 20, coins: 5 });
     assert.equal(state.entries.length, 1);
     await assert.rejects(() => second.command('create', complete, now), /already used/);
+    await Promise.all([
+      first.command('note', { type: 'entry.note', entryId: state.entries[0].id, note: 'Notes survive concurrent writes.' }, now),
+      second.command('pin', { type: 'habit.pin', habitId: state.habits[0].id, pinned: true }, now),
+    ]);
+    state = await second.read();
+    assert.equal(state.entries[0].note, 'Notes survive concurrent writes.');
+    assert.equal(state.habits[0].pinned, true);
+    await first.restore(JSON.parse(JSON.stringify(state)));
+    assert.deepEqual(await second.read(), state);
     await assert.rejects(() => second.restore({ ...state, transactions: [] }), /balances/);
     assert.deepEqual(await first.read(), state);
     await second.restore(newState('UTC'));

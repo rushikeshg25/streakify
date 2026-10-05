@@ -201,3 +201,18 @@ test('archived rewards can be restored without changing past redemptions', () =>
   assert.deepEqual(state.redemptions, redemptions);
   assert.deepEqual(balances(state), { xp: 20, coins: 0 });
 });
+
+test('restoring a removed check-in can restore its note atomically', () => {
+  let state = log(habit(), '2026-09-28');
+  state = applyCommand(state, { type: 'entry.note', entryId: state.entries[0].id, note: 'A useful reflection.' });
+  const original = state.entries[0];
+  state = log(state, '2026-09-28', 0);
+  assert.equal(state.entries.length, 0);
+  assert.deepEqual(balances(state), { xp: 0, coins: 0 });
+  const restore = { type: 'entry.set' as const, habitId: original.habitId, date: original.date, value: original.value, note: original.note };
+  assert.throws(() => applyCommand(state, { ...restore, note: 'a'.repeat(501) }, at('2026-09-28')));
+  state = applyCommand(state, restore, at('2026-09-28'));
+  assert.equal(state.entries[0].note, original.note);
+  assert.deepEqual(balances(state), { xp: 20, coins: 5 });
+  assert.deepEqual(validateBackup(state), state);
+});
