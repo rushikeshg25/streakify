@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { ArrowDown, ArrowUp, ArrowUpRight, Archive, Check, ChevronLeft, ChevronRight, CircleHelp, Clock3, Flame, Gift, LayoutGrid, ListChecks, LoaderCircle, MoreHorizontal, MessageSquare, Search, Pause, Pencil, Pin, Play, Plus, RotateCcw, Settings2, Sparkles, Sprout, TrendingUp, X, Zap } from 'lucide-react';
+import { ArrowDown, ArrowUp, ArrowUpRight, Archive, CalendarDays, Check, ChevronLeft, ChevronRight, CircleHelp, Clock3, Flame, Gift, LayoutGrid, ListChecks, LoaderCircle, MoreHorizontal, MessageSquare, Search, Pause, Pencil, Pin, Play, Plus, RotateCcw, Settings2, Sparkles, Sprout, TrendingUp, X, Zap } from 'lucide-react';
 import type { Command, Entry, Habit, HabitInput, Reward, State } from '../shared/model';
 import { addDays, balances, entryFor, isDue, isPaused, ruleAt, streak, templates, todayIn, weekOf, weeklyCompletions } from '../shared/model';
 import { Coin, dateLabel, Empty, Modal, scheduleLabel, Symbol } from './ui';
 import { HabitForm, RewardForm } from './forms';
 import { NoteForm } from './NoteForm';
+import { DatePicker } from './DatePicker';
 import { ProgressScreen, RewardsScreen, SettingsScreen } from './screens';
 
 export type RunCommand = (command: Command, message?: string) => Promise<boolean>;
@@ -26,6 +27,7 @@ export default function App({ onSignOut }: { onSignOut?: () => Promise<void> }) 
   const [noteId, setNoteId] = useState<string | null>(null);
   const [now, setNow] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
+  const [datePickerOpen, setDatePickerOpen] = useState(false);
   const [filter, setFilter] = useState('All habits');
   const [statusFilter, setStatusFilter] = useState<'all' | 'todo' | 'done'>('all');
   const [search, setSearch] = useState('');
@@ -76,7 +78,8 @@ export default function App({ onSignOut }: { onSignOut?: () => Promise<void> }) 
 
   const noteEntry = state.entries.find(entry => entry.id === noteId);
   const today = todayIn(state.settings.timezone, now);
-  const date = selectedDate ?? today;
+  const date = selectedDate && selectedDate <= today ? selectedDate : today;
+  const earliest = state.habits.reduce((first, habit) => habit.created < first ? habit.created : first, today);
   const balance = balances(state);
   const level = Math.floor(balance.xp / state.settings.levelSize) + 1;
   const levelProgress = balance.xp % state.settings.levelSize;
@@ -140,6 +143,7 @@ export default function App({ onSignOut }: { onSignOut?: () => Promise<void> }) 
         {error && <div className="error-banner" role="alert">{error}<button onClick={() => void refresh()}>Retry</button></div>}
         {page === 'today' && <>
           <div className="page-heading"><div><p className="date-heading"><SunIcon />{dateLabel(date, { weekday: 'long', month: 'long', day: 'numeric' })}</p><h1>{date === today ? 'Make today count.' : 'Every step is part of the story.'}</h1><p>{state.settings.name === 'Friend' ? 'Your space to build a little more consistency.' : `Welcome back, ${state.settings.name}. Let’s take one small step.`}</p></div><button className="button primary" onClick={() => setHabitForm({})}><Plus size={18} />New habit</button></div>
+          {!state.habits.length && <div className="setup-banner"><span><strong>Make this space yours.</strong> Your check-ins follow {state.settings.timezone.replaceAll('_', ' ')}.</span><button className="text-button" onClick={() => navigate('settings')}>Personalize workspace <ArrowUpRight size={16} /></button></div>}
           <div className="today-layout"><div className="today-main">
             <section className="day-card" aria-label="Daily progress">
               <div className="daily-copy"><span className="section-eyebrow"><span className="live-dot" /> YOUR DAILY MOMENTUM</span>
@@ -151,7 +155,7 @@ export default function App({ onSignOut }: { onSignOut?: () => Promise<void> }) 
               <div className="completion-ring" aria-hidden="true"><svg viewBox="0 0 120 120"><circle className="ring-track" cx="60" cy="60" r="52" /><circle className="ring-value" cx="60" cy="60" r="52" strokeDasharray={`${dayPercent / 100 * 327} 327`} /></svg><div><strong>{dayPercent}<span>%</span></strong><small>COMPLETE</small></div></div>
             </section>
             <div className="daily-overview" aria-label="Daily overview"><div><span className="overview-icon"><ListChecks size={18} /></span><span><strong>{remaining}</strong><small>Still to do</small></span></div><div><span className="overview-icon"><Check size={18} /></span><span><strong>{completed}</strong><small>Completed</small></span></div><div><span className="overview-icon"><TrendingUp size={18} /></span><span><strong>{weekCheckins}</strong><small>This week</small></span></div></div>
-            <section className="habits-section"><div className="section-heading"><h2>Your habits <span className="count-badge">{due.length}</span></h2><div className="date-nav"><button className="icon-button" aria-label="Previous day" onClick={() => setSelectedDate(addDays(date, -1))}><ChevronLeft size={17} /></button><button className="text-button" onClick={() => setSelectedDate(null)}>{date === today ? 'Today' : dateLabel(date)}</button><button className="icon-button" aria-label="Next day" disabled={date >= today} onClick={() => setSelectedDate(addDays(date, 1))}><ChevronRight size={17} /></button></div></div>
+            <section className="habits-section"><div className="section-heading"><h2>Your habits <span className="count-badge">{due.length}</span></h2><div className="date-nav"><button className="icon-button" aria-label="Jump to a day" onClick={() => setDatePickerOpen(true)}><CalendarDays size={17} /></button><button className="icon-button" aria-label="Previous day" disabled={date <= earliest} onClick={() => setSelectedDate(addDays(date, -1))}><ChevronLeft size={17} /></button><button className="text-button" onClick={() => setSelectedDate(null)}>{date === today ? 'Today' : dateLabel(date)}</button><button className="icon-button" aria-label="Next day" disabled={date >= today} onClick={() => setSelectedDate(addDays(date, 1))}><ChevronRight size={17} /></button></div></div>
               <div className="week-strip">{Array.from({ length: 7 }, (_, i) => addDays(week, i)).map(day => { const count = state.entries.filter(e => e.date === day && e.complete).length; return <button key={day} disabled={day > today} aria-pressed={day === date} className={day === date ? 'selected' : ''} onClick={() => setSelectedDate(day)}><span>{dateLabel(day, { weekday: 'short' })}</span><strong>{dateLabel(day, { day: 'numeric' })}</strong><i className={count ? 'has-progress' : ''}>{count ? <Check size={9} /> : null}</i></button>; })}</div>
               {due.length > 0 && <><div className="habit-toolbar"><div className="status-tabs" aria-label="Filter by completion">{([{ id: 'all', label: 'All' }, { id: 'todo', label: 'To do' }, { id: 'done', label: 'Done' }] as const).map(item => <button key={item.id} aria-pressed={statusFilter === item.id} onClick={() => setStatusFilter(item.id)}>{item.label}</button>)}</div><label className="habit-search"><Search size={16} /><input aria-label="Search habits" placeholder="Find a habit…" value={search} onChange={e => setSearch(e.target.value)} /></label></div>
                 {categories.length > 1 && <div className="filter-tabs" aria-label="Filter habits">{['All habits', ...categories].map(c => <button key={c} aria-pressed={activeFilter === c} className={activeFilter === c ? 'active' : ''} onClick={() => setFilter(c)}>{c}</button>)}</div>}</>}
@@ -167,11 +171,12 @@ export default function App({ onSignOut }: { onSignOut?: () => Promise<void> }) 
           <p className="page-footnote"><Sprout size={15} />Progress is personal. Make this space your own.</p>
         </>}
         {page === 'habits' && <><div className="page-heading"><div><p className="date-heading">Built around your life</p><h1>Small habits. Your rules.</h1><p>Adjust your routines as life changes. Your progress stays with you.</p></div><button className="button primary" onClick={() => setHabitForm({})}><Plus size={18} />New habit</button></div><div className="section-heading"><div className="filter-tabs"><button className={!showArchived ? 'active' : ''} onClick={() => setShowArchived(false)}>Active habits <span>{active.length}</span></button><button className={showArchived ? 'active' : ''} onClick={() => setShowArchived(true)}>Archived <span>{state.habits.filter(h => h.archived).length}</span></button></div></div><label className="management-search"><Search size={17} /><input aria-label="Search your habits" placeholder="Search by name or category" value={habitQuery} onChange={e => setHabitQuery(e.target.value)} /></label>{habitQuery.trim() && !managedHabits.length && <p className="empty-inline" role="status">No habits match “{habitQuery}”. Try another name or category.</p>}<div className="habit-list management">{managedHabits.map(h => habitRow(h, true))}</div>{!state.habits.some(h => h.archived === showArchived) && <Empty title={showArchived ? 'Your history has a home' : 'Start with something small'} text={showArchived ? 'Archived habits appear here. Their check-ins and earnings are always preserved.' : 'Create a habit that fits your life. You can fine-tune it anytime.'}>{!showArchived && <button className="button primary" onClick={() => setHabitForm({})}><Plus size={17} />Create your first habit</button>}</Empty>}<div className="tip-banner"><Clock3 size={21} /><div><strong>Build a routine with breathing room.</strong><p>Pause a habit when life gets busy, or use a rest day from Today. Neither takes away your earned progress.</p></div></div></>}
-        {page === 'progress' && <ProgressScreen state={state} today={today} busy={busy} run={run} />}
+        {page === 'progress' && <ProgressScreen state={state} today={today} busy={busy} run={run} openDay={day => { navigate('today'); setSelectedDate(day); }} />}
         {page === 'rewards' && <RewardsScreen state={state} today={today} busy={busy} run={run} edit={reward => setRewardForm({ reward })} confirm={(title, text, action) => setConfirm({ title, text, action })} />}
         {page === 'settings' && <SettingsScreen state={state} busy={busy} run={run} restore={next => { setState(next); setSelectedDate(null); notify({ message: 'Backup restored. Welcome back.' }); }} notify={message => notify({ message, error: true })} />}
       </main>
     </div>
+    {datePickerOpen && <DatePicker date={date} today={today} earliest={earliest} onChoose={setSelectedDate} onClose={() => setDatePickerOpen(false)} />}
     {noteEntry && <NoteForm entry={noteEntry} habitName={state.habits.find(h => h.id === noteEntry.habitId)!.name} busy={busy} run={run} onClose={() => setNoteId(null)} />}
     {habitForm && <HabitForm {...habitForm} settings={state.settings} busy={busy} onClose={() => setHabitForm(null)} onSave={input => run({ type: 'habit.save', habitId: habitForm.habit?.id, input }, habitForm.habit ? 'Habit updated. Rule changes are scheduled.' : 'A new habit, a fresh start.')} />}
     {rewardForm && <RewardForm {...rewardForm} busy={busy} onClose={() => setRewardForm(null)} onSave={input => run({ type: 'reward.save', rewardId: rewardForm.reward?.id, input }, 'Reward saved. Something good to work toward.')} />}
