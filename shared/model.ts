@@ -68,7 +68,7 @@ export const commandSchema = z.discriminatedUnion('type', [
   z.object({ type: z.literal('entry.set'), habitId: id, date: dateSchema, value: amount, rested: z.boolean().optional() }),
   z.object({ type: z.literal('entry.note'), entryId: id, note: z.string().trim().max(500) }),
   z.object({ type: z.literal('reward.save'), rewardId: id.optional(), input: rewardInputSchema }),
-  z.object({ type: z.literal('reward.archive'), rewardId: id }),
+  z.object({ type: z.literal('reward.archive'), rewardId: id, archived: z.boolean().optional() }),
   z.object({ type: z.literal('reward.redeem'), rewardId: id }),
   z.object({ type: z.literal('redemption.undo'), redemptionId: id }),
   z.object({ type: z.literal('settings.save'), settings: settingsSchema }),

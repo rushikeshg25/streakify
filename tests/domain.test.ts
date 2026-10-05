@@ -187,3 +187,17 @@ test('pinning is persistent metadata that preserves ordering and old backups', (
   state = applyCommand(state, { type: 'habit.pin', habitId: state.habits[0].id, pinned: false });
   assert.equal(state.habits[0].pinned, false);
 });
+
+test('archived rewards can be restored without changing past redemptions', () => {
+  let state = log(habit(), '2026-09-28');
+  state = applyCommand(state, { type: 'reward.save', input: { name: 'Coffee', description: '', cost: 5, icon: 'coffee', limit: 'daily' } }, at('2026-09-28'));
+  const rewardId = state.rewards[0].id;
+  state = applyCommand(state, { type: 'reward.redeem', rewardId }, at('2026-09-28'));
+  const redemptions = structuredClone(state.redemptions);
+  state = applyCommand(state, { type: 'reward.archive', rewardId });
+  assert.equal(state.rewards[0].archived, true);
+  state = applyCommand(state, { type: 'reward.archive', rewardId, archived: false });
+  assert.equal(state.rewards[0].archived, false);
+  assert.deepEqual(state.redemptions, redemptions);
+  assert.deepEqual(balances(state), { xp: 20, coins: 0 });
+});

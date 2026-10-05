@@ -90,7 +90,7 @@ export function applyCommand(previous: State, raw: Command, now = new Date(), uu
     case 'reward.archive': {
       const reward = state.rewards.find(r => r.id === command.rewardId);
       if (!reward) throw new Error('This reward no longer exists.');
-      reward.archived = true;
+      reward.archived = command.archived ?? true;
       break;
     }
     case 'reward.redeem': {
