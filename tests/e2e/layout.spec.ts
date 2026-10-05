@@ -18,7 +18,8 @@ function populatedWorkspace() {
       if ((offset + index) % 2 === 0 && isDue(state, habit, date)) state = applyCommand(state, { type: 'entry.set', habitId: habit.id, date, value: ruleAt(habit, date).target }, now);
     }
   }
-  if (state.entries[0]) state = applyCommand(state, { type: 'entry.note', entryId: state.entries[0].id, note: 'A useful reflection with a long link: https://example.com/' + 'a'.repeat(180) + '\nA second line to check wrapping.' }, now);
+  const notedEntry = state.entries.at(-1);
+  if (notedEntry) state = applyCommand(state, { type: 'entry.note', entryId: notedEntry.id, note: 'A useful reflection with a long link: https://example.com/' + 'a'.repeat(180) + '\nA second line to check wrapping.' }, now);
   state = applyCommand(state, { type: 'habit.pin', habitId: state.habits[0].id, pinned: true }, now);
   for (const [name, cost] of [['Coffee and a quiet afternoon with a new book', 40], ['A weekend adventure somewhere new', 150], ['An evening of games with friends', 80]] as const) {
     state = applyCommand(state, { type: 'reward.save', input: { name, cost, description: 'Something worth showing up for, saved a little at a time.', icon: 'gift', limit: 'weekly' } }, now);
