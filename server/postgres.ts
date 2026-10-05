@@ -1,12 +1,13 @@
 import { Pool } from 'pg';
 import type { PoolClient } from 'pg';
+import { postgresConnectionString } from './postgres-config.js';
 import { applyCommand, validateBackup } from '../shared/commands.js';
 import { newState } from '../shared/model.js';
 import type { Command, State } from '../shared/model.js';
 
 export function createPostgresStore(connectionString: string) {
   async function withClient<T>(fn: (client: PoolClient) => Promise<T>): Promise<T> {
-    const pool = new Pool({ connectionString, max: 1, connectionTimeoutMillis: 10000 });
+    const pool = new Pool({ connectionString: postgresConnectionString(connectionString), max: 1, connectionTimeoutMillis: 10000 });
     let client: PoolClient | undefined;
     try { client = await pool.connect(); return await fn(client); }
     finally { client?.release(); await pool.end(); }
