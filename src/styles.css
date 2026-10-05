@@ -882,3 +882,21 @@ main { width: 100%; padding-bottom: 40px; }
   .form-row { grid-template-columns: 1fr; gap: 0; }
   .form-row > label + label { margin-top: 0; }
 }
+
+.shortcut-guide { padding-bottom: 20px; margin-bottom: 20px; border-bottom: 1px solid var(--line); }
+.shortcut-guide h3 { font-size: 15px; margin-bottom: 16px; }
+.shortcut-guide dl { display: grid; gap: 12px; margin: 0 0 20px; }
+.shortcut-guide dl > div { display: grid; grid-template-columns: 70px minmax(0, 1fr); gap: 12px; align-items: center; }
+.shortcut-guide dt { display: flex; gap: 4px; align-items: center; }
+.shortcut-guide dd { margin: 0; font-size: 12px; color: var(--muted); }
+kbd { display: inline-grid; place-items: center; min-width: 24px; min-height: 26px; padding: 2px 5px; font-family: inherit; font-size: 12px; font-weight: 600; border: 1px solid var(--line); border-bottom-width: 2px; border-radius: 5px; background: var(--bg); color: var(--ink); }
+.shortcut-guide .inline-check { min-height: 44px; }
+.shortcut-guide > p { margin-top: 8px; }
+.topbar-right { gap: 14px; }
+.guide-trigger { flex-shrink: 0; }
+@media (max-width: 480px) {
+  .topbar-right { gap: 8px; }
+  .breadcrumb { font-size: 0; gap: 0; }
+  .breadcrumb > svg { display: none; }
+  .breadcrumb > span { font-size: 11px; }
+}

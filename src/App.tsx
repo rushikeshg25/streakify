@@ -6,6 +6,7 @@ import { Coin, dateLabel, Empty, Modal, scheduleLabel, Symbol } from './ui';
 import { HabitForm, RewardForm } from './forms';
 import { NoteForm } from './NoteForm';
 import { DatePicker } from './DatePicker';
+import { useShortcuts } from './useShortcuts';
 import { ProgressScreen, RewardsScreen, SettingsScreen } from './screens';
 
 export type RunCommand = (command: Command, message?: string) => Promise<boolean>;
@@ -74,6 +75,17 @@ export default function App({ onSignOut }: { onSignOut?: () => Promise<void> }) 
     finally { busyRef.current = false; setBusy(false); }
   };
   function navigate(next: Page) { setPage(next); location.hash = next; setFilter('All habits'); setStatusFilter('all'); setSearch(''); window.scrollTo({ top: 0 }); }
+  const shortcuts = useShortcuts(!!state && !busy, key => {
+    const next = nav[Number(key) - 1];
+    if (/^[1-5]$/.test(key) && next) { navigate(next.id); return true; }
+    if (key === 'n') { setHabitForm({}); return true; }
+    if (key === '?') { setHelp(true); return true; }
+    if (key === '/') {
+      const input = document.querySelector<HTMLInputElement>('main input[aria-label^="Search"]');
+      if (input) { input.focus(); return true; }
+    }
+    return false;
+  });
   if (!state) return <div className="loading-screen"><span className="brand-mark"><Zap fill="currentColor" size={26} /></span><h1>Streakify</h1>{error ? <><p>{error}</p><button className="button primary" onClick={() => void refresh()}>Try again</button></> : <><LoaderCircle className="spin" size={24} /><p>Making room for better days…</p></>}</div>;
 
   const noteEntry = state.entries.find(entry => entry.id === noteId);
@@ -138,7 +150,7 @@ export default function App({ onSignOut }: { onSignOut?: () => Promise<void> }) 
       <nav aria-label="Main navigation">{nav.map(item => <button key={item.id} className={`nav-item ${page === item.id ? 'active' : ''}`} aria-current={page === item.id ? 'page' : undefined} onClick={() => navigate(item.id)}><item.icon size={20} /><span>{item.label}</span>{item.id === 'today' && due.length > 0 && <small>{completed}/{due.length}</small>}</button>)}</nav>
       <div className="sidebar-bottom"><div className="sidebar-note"><Sprout size={25} /><strong>Small steps. Real growth.</strong><p>Your pace is the right pace.<br />Just keep showing up.</p></div><button className="help-button" onClick={() => setHelp(true)}><CircleHelp size={18} />A quick guide</button><button className="profile" onClick={() => navigate('settings')}><span className="avatar">{state.settings.name.slice(0, 1).toUpperCase()}</span><span><strong>{state.settings.name}</strong><small>Your personal space</small></span><Settings2 size={17} /></button></div>
     </aside>
-    <div className="workspace"><header className="topbar"><div className="breadcrumb">Personal workspace <ChevronRight size={13} /><span>{nav.find(n => n.id === page)?.label}</span></div><div className="topbar-right">{onSignOut && <button className="logout-button" onClick={() => void onSignOut()}>Sign out</button>}{state.settings.showCoins && <span className="coin-balance" title="Available coins"><Coin size={18} />{balance.coins}<span>coins</span></span>}<span className="top-avatar">{state.settings.name.slice(0, 1).toUpperCase()}</span></div></header>
+    <div className="workspace"><header className="topbar"><div className="breadcrumb">Personal workspace <ChevronRight size={13} /><span>{nav.find(n => n.id === page)?.label}</span></div><div className="topbar-right"><button className="icon-button guide-trigger" aria-label="Open guide and keyboard shortcuts" title="Guide and shortcuts (?)" onClick={() => setHelp(true)}><CircleHelp size={18} /></button>{onSignOut && <button className="logout-button" onClick={() => void onSignOut()}>Sign out</button>}{state.settings.showCoins && <span className="coin-balance" title="Available coins"><Coin size={18} />{balance.coins}<span>coins</span></span>}<span className="top-avatar">{state.settings.name.slice(0, 1).toUpperCase()}</span></div></header>
       <main id="main-content" tabIndex={-1}>
         {error && <div className="error-banner" role="alert">{error}<button onClick={() => void refresh()}>Retry</button></div>}
         {page === 'today' && <>
@@ -182,7 +194,7 @@ export default function App({ onSignOut }: { onSignOut?: () => Promise<void> }) 
     {rewardForm && <RewardForm {...rewardForm} busy={busy} onClose={() => setRewardForm(null)} onSave={input => run({ type: 'reward.save', rewardId: rewardForm.reward?.id, input }, 'Reward saved. Something good to work toward.')} />}
     {logForm && <LogForm habit={logForm.habit} entry={entryFor(state, logForm.habit.id, logForm.date)} date={logForm.date} busy={busy} onClose={() => setLogForm(null)} onSave={value => log(logForm.habit, logForm.date, value)} />}
     {confirm && <Modal title={confirm.title} onClose={() => setConfirm(null)}><p className="confirm-copy">{confirm.text}</p><div className="modal-footer"><button className="button secondary" onClick={() => setConfirm(null)}>Cancel</button><button className="button primary" disabled={busy} onClick={async () => { if (await confirm.action()) setConfirm(null); }}>{busy ? 'Saving…' : 'Confirm'}</button></div></Modal>}
-    {help && <Modal title="A little momentum goes a long way" onClose={() => setHelp(false)}><div className="guide"><p><strong>Start small.</strong> Create a habit, choose how you track it, and set a schedule that fits.</p><p><strong>Show up.</strong> Check in from Today. Counts and minutes support partial progress. Use the date arrows to fill in a missed check-in.</p><p><strong>Enjoy your progress.</strong> Complete a daily target to earn XP and coins. XP builds your level; coins buy your custom rewards.</p><p><strong>Make room for life.</strong> Rest days protect daily streaks without earning points. Weekly habits count completed weeks; a partly paused week still needs its target. A fully paused week preserves the streak.</p><p><strong>Stay in control.</strong> Change your defaults in Settings. You can undo check-ins and reward redemptions from Progress and Rewards. If you undo coins already spent, your balance can go below zero until you earn them back.</p><p className="notice">This is your private, single-user workspace. Export a backup in Settings to keep a copy of your progress.</p></div></Modal>}
+    {help && <Modal title="A little momentum goes a long way" onClose={() => setHelp(false)}><div className="guide"><section className="shortcut-guide" aria-label="Keyboard shortcuts"><h3>Keyboard shortcuts</h3><dl><div><dt><kbd>1</kbd>–<kbd>5</kbd></dt><dd>Switch between the five screens</dd></div><div><dt><kbd>N</kbd></dt><dd>Create a new habit</dd></div><div><dt><kbd>/</kbd></dt><dd>Focus search on the current screen</dd></div><div><dt><kbd>?</kbd></dt><dd>Open this guide</dd></div><div><dt><kbd>Esc</kbd></dt><dd>Close a dialog</dd></div></dl><label className="inline-check"><input type="checkbox" checked={shortcuts.enabled} onChange={event => shortcuts.setEnabled(event.target.checked)} />Enable single-key shortcuts</label><p>Saved on this browser. Shortcuts pause while typing or using a dialog.</p></section><p><strong>Start small.</strong> Create a habit, choose how you track it, and set a schedule that fits.</p><p><strong>Show up.</strong> Check in from Today. Counts and minutes support partial progress. Use the date arrows to fill in a missed check-in.</p><p><strong>Enjoy your progress.</strong> Complete a daily target to earn XP and coins. XP builds your level; coins buy your custom rewards.</p><p><strong>Make room for life.</strong> Rest days protect daily streaks without earning points. Weekly habits count completed weeks; a partly paused week still needs its target. A fully paused week preserves the streak.</p><p><strong>Stay in control.</strong> Change your defaults in Settings. You can undo check-ins and reward redemptions from Progress and Rewards. If you undo coins already spent, your balance can go below zero until you earn them back.</p><p className="notice">This is your private, single-user workspace. Export a backup in Settings to keep a copy of your progress.</p></div></Modal>}
     {toast && <div className={`toast ${toast.error ? 'error' : ''}`} role={toast.error ? 'alert' : 'status'}>{toast.error ? <CircleHelp size={19} /> : <Check size={19} />}<span>{toast.message}</span>{toast.undo && <button onClick={toast.undo}>Undo</button>}<button className="toast-close" aria-label="Dismiss notification" onClick={() => setToast(null)}><X size={16} /></button></div>}
   </div>;
 }
