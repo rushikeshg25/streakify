@@ -741,3 +741,20 @@
   .review-leaders { padding: 20px 0 0; border-left: 0; border-top: 1px solid var(--line); }
   .review-count { font-size: 32px; }
 }
+.pin-label { display: inline-flex; align-items: center; gap: 3px; font-size: 9px; font-weight: 700; color: var(--primary); }
+.manage-actions [aria-pressed=true] { background: var(--tint); color: var(--primary); }
+.management-search { position: relative; max-width: 440px; margin: 0 0 20px; }
+.management-search svg { position: absolute; top: 14px; left: 13px; color: var(--muted); }
+.management-search input { padding-left: 40px; font-weight: 400; }
+.rewards-toolbar { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; margin: 22px 0; }
+.rewards-toolbar .habit-search { max-width: none; min-width: 150px; }
+.inline-check { display: flex; flex-direction: row; align-items: center; gap: 8px; margin: 0; color: var(--muted); font-size: 12px; cursor: pointer; }
+.inline-check input { width: 18px; height: 18px; min-height: 18px; accent-color: var(--primary); }
+.reward-saving { margin-top: 20px; }
+.saving-label { display: flex; justify-content: space-between; gap: 10px; color: var(--muted); font-size: 10px; }
+.reward-saving .xp-track { margin-top: 8px; }
+@media (max-width: 600px) { .rewards-toolbar { gap: 13px; } .rewards-toolbar > .status-tabs { width: 100%; } .rewards-toolbar > .status-tabs button { flex: 1; padding-inline: 8px; } }
+.setup-banner { display: flex; align-items: center; justify-content: space-between; gap: 18px; background: var(--tint); border: 1px solid var(--line); border-radius: 12px; padding: 15px 18px; margin-bottom: 22px; font-size: 12px; color: var(--muted); }
+.setup-banner strong { color: var(--ink); }
+.setup-banner .text-button { flex-shrink: 0; }
+@media (max-width: 600px) { .setup-banner { flex-direction: column; align-items: flex-start; gap: 7px; } }

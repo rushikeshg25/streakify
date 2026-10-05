@@ -32,6 +32,7 @@ export function applyCommand(previous: State, raw: Command, now = new Date(), uu
       break;
     }
     case 'habit.archive': habitById(command.habitId).archived = command.archived; break;
+    case 'habit.pin': habitById(command.habitId).pinned = command.pinned; break;
     case 'habit.pause': {
       const habit = habitById(command.habitId);
       if (command.paused && !isPaused(habit, today)) habit.pauses.push({ start: today, end: null });
@@ -89,7 +90,7 @@ export function applyCommand(previous: State, raw: Command, now = new Date(), uu
     case 'reward.archive': {
       const reward = state.rewards.find(r => r.id === command.rewardId);
       if (!reward) throw new Error('This reward no longer exists.');
-      reward.archived = true;
+      reward.archived = command.archived ?? true;
       break;
     }
     case 'reward.redeem': {
